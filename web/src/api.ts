@@ -197,7 +197,7 @@ export interface Health extends WithProv {
   engine: string;
   engine_error: string | null;
   circuits: boolean;
-  research: { configured: boolean; url: string | null };
+  research: { configured: boolean; url: string | null; token: boolean };
   bench: { found: boolean; error: string | null; features: Record<string, boolean> };
 }
 

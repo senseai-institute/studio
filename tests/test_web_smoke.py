@@ -136,3 +136,86 @@ def test_research_tab_when_configured(cfg: Settings) -> None:
     from fastapi.testclient import TestClient
 
     assert TestClient(create_app(c)).get("/api/studio/health").json()["research"]["configured"]
+
+
+@pytest.fixture
+def research_server() -> Iterator[str]:
+    from tests.fake_research import make_app
+
+    port = _port()
+    srv = uvicorn.Server(
+        uvicorn.Config(make_app(), host="127.0.0.1", port=port, log_level="warning")
+    )
+    t = threading.Thread(target=srv.run, daemon=True)
+    t.start()
+    for _ in range(100):
+        if srv.started:
+            break
+        time.sleep(0.05)
+    yield f"http://127.0.0.1:{port}"
+    srv.should_exit = True
+    t.join(5)
+
+
+def test_research_tab_end_to_end(cfg: Settings, research_server: str, page: Any) -> None:
+    """Studio → its proxy (with the shared token) → research: what to check, a claim, the chat
+    replaying recorded research events, approving a card, and testing an API key."""
+    from tests.fake_research import TOKEN
+
+    c = replace(cfg, research_url=research_server, research_token=TOKEN)
+    port = _port()
+    srv = uvicorn.Server(
+        uvicorn.Config(create_app(c), host="127.0.0.1", port=port, log_level="warning")
+    )
+    t = threading.Thread(target=srv.run, daemon=True)
+    t.start()
+    for _ in range(100):
+        if srv.started:
+            break
+        time.sleep(0.05)
+    try:
+        pg = page
+        pg.goto(f"http://127.0.0.1:{port}/studio/felidae/vision/research")
+        pg.wait_for_selector(".start-row")
+        rows = pg.locator(".start-row")
+        assert rows.count() == 1, "only this clade's values"
+        assert "What is the cat's scotopic" in pg.locator(".start").inner_text()
+        rows.first.click()
+        pg.wait_for_selector(".claim-value")
+        assert pg.locator(".claim-value").inner_text() == "-0.74 log10 re human"
+
+        pg.fill(".chat-form textarea", "Where does -0.74 come from?")
+        pg.click(".chat-form button[type=submit]")
+        pg.wait_for_selector('.tool-chip[data-state="ok"]')
+        pg.wait_for_function("() => !document.querySelector('.chat-form button').disabled")
+        assert "{" not in pg.locator(".chat").inner_text(), "no raw JSON in the chat"
+        assert pg.locator(".msg.assistant").count() >= 1
+
+        pg.fill(".chat-form textarea", "Use the optics-removed value.")
+        pg.click(".chat-form button[type=submit]")
+        card = pg.locator('.action-card[data-status="pending"]')
+        card.wait_for()
+        assert card.get_attribute("data-action", timeout=1000).startswith("act-")
+        assert "-0.08" in card.inner_text()
+        card.get_by_role("button", name="Approve").click()
+        assert "full sentence" in card.locator(".card-status").inner_text()
+        card.locator("textarea").fill("For a camera the lens replaces the pupil.")
+        card.get_by_role("button", name="Approve").click()
+        pg.wait_for_selector('.action-card[data-status="approved"]')
+        pg.wait_for_function(
+            "() => document.querySelector('.claim-value')?.textContent === '-0.08 log10 re human'"
+        )
+
+        pg.click("#research-tab-settings")
+        pg.wait_for_selector(".settings-table")
+        assert pg.locator('tr[data-service="openalex"]').get_attribute("data-state") == "not_set"
+        pg.locator('tr[data-service="openalex"]').get_by_role("button", name="Test").click()
+        pg.wait_for_selector('tr[data-service="openalex"] .check-result[data-ok="true"]')
+        assert "Railway" in pg.locator(".settings-view").inner_text()
+        if shots := os.environ.get("STUDIO_SCREENSHOTS"):
+            pg.screenshot(path=f"{shots}/research-settings.png")
+            pg.click("#research-tab-claim")
+            pg.screenshot(path=f"{shots}/research-claim.png")
+    finally:
+        srv.should_exit = True
+        t.join(5)
