@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: CC-BY-4.0
+# Species Sensory Library — Strigidae (typical owls). Hearing values are from
+# the barn owl (Tytonidae), the reference species for owl sound localisation;
+# this is stated per value. Full references: library/CITATIONS.md
+
+clade: Strigidae
+rank: family
+common_names: [owls, typical owls]
+
+representative_species:
+  - name: Tyto alba
+    common_name: barn owl
+    notes: >-
+      Strictly a tytonid, not a strigid. Its localisation data are the best
+      available for owls and are used here with that caveat.
+
+conservation:
+  iucn: mixed
+  source: https://www.iucnredlist.org/
+
+senses:
+  - id: hearing
+    modality: hearing
+    organ: asymmetric ear openings behind a facial ruff
+    signal: airborne sound pressure
+    spatial_resolution:
+      value: 2
+      unit: deg
+      confidence: high
+      species: Tyto alba
+      conditions: head-orienting accuracy to frontal wideband sources, azimuth and elevation
+      citations: [10.1007/BF00663105]
+    notes: >-
+      Azimuth is computed from interaural time and spectrum; elevation from
+      interaural spectral differences created by the ruff and the asymmetric
+      ears. Removing the ruff abolishes elevation localisation but leaves
+      azimuth intact.
+    citations:
+      - 10.1007/BF00663105
+      - 10.1007/BF00663106
+    open_questions:
+      - Audible frequency range (audiogram) not yet verified for this entry.
+      - Localisation accuracy for a strigid (e.g. Strix, Bubo) rather than the barn owl.
+
+  - id: vision
+    modality: vision
+    organ: large tubular eyes, rod-dominated retina
+    signal: light, scotopic to photopic
+    citations: [10.1007/BF00663105]
+    open_questions:
+      - Absolute visual threshold.
+      - Acuity.
+
+behaviours:
+  - name: acoustic_strike
+    uses_senses: [hearing]
+    description: >-
+      Locates prey by sound alone in darkness, orients the head, then flies
+      to the sound source and strikes with the talons.
+    citations: [10.1007/BF00663105]
+
+contributors:
+  - name: Claude Code (Anthropic)
+    role: drafted-by-ai
+
+review_status: draft
+version: 0.1.0

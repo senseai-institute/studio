@@ -1,0 +1,9 @@
+# Fixture rulebook (P0 shape as Studio reads it; see docs/UPSTREAM.md).
+rules:
+  - id: felidae-vision-gain
+    clade: felidae
+    sense: vision
+    sets: frame.gain_lut
+    species: panther_vision
+    status: draft
+    reads: [felidae.senses.vision.detection_threshold]

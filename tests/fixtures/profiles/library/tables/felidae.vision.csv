@@ -1,0 +1,3 @@
+path,value,unit,citation,status,quote
+felidae.senses.vision.detection_threshold,-0.74,log10 re human,10.1152/jn.90641.2008,unverified,
+felidae.senses.vision.measurements.rod_density_peak,460000,cells/mm^2,10.1002/cne.901480209,verified,"peak rod density of 460,000/mm2"

@@ -1,0 +1,37 @@
+# SenseAI Studio: which data a sense can be run on, keyed by the library schema's `modality`
+# (library/schema/clade.schema.json, $defs.sense.modality).
+#
+#   streams   senseai-ingest Modality names a *synthetic* run generates (SyntheticReplay)
+#   datasets  dataset adapters Studio looks for under SENSEAI_DATA_ROOT (dsec: event + frame
+#             sequences; wav: audio recordings)
+#   view      what the Run tab draws live: frame (camera/event frame), spectrogram, trace
+#
+# A modality that is not listed has no data stream yet: the Run tab says so.
+vision:
+  streams: [EVENT, FRAME]
+  datasets: [dsec]
+  view: frame
+hearing:
+  streams: [AUDIO]
+  datasets: [wav]
+  view: spectrogram
+echolocation:
+  streams: [AUDIO]
+  datasets: [wav]
+  view: spectrogram
+touch:
+  streams: [IMU]
+  datasets: []
+  view: trace
+vibration:
+  streams: [IMU]
+  datasets: []
+  view: trace
+equilibrium:
+  streams: [IMU]
+  datasets: []
+  view: trace
+proprioception:
+  streams: [IMU]
+  datasets: []
+  view: trace
