@@ -4,7 +4,7 @@
 
 Every API response carries ``provenance: [{field, source_file, line_or_key}]``. ``field`` is a
 slash path into the response (``quantities/2/value``); ``source_file`` is ``<repo>/<path>``
-(``profiles/library/felidae.yaml``); ``line_or_key`` is a 1-based line number when the file has
+(``profiles/library/<clade>.yaml``); ``line_or_key`` is a 1-based line number when the file has
 lines, else a key (a CLI's JSON key, a CSV row id).
 """
 

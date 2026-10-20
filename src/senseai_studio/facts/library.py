@@ -30,7 +30,7 @@ QUANTITY_KEYS = ("value", "unit", "confidence", "species", "conditions", "notes"
 class Quantity:
     """One cited value with the library path that names it and the line it sits on."""
 
-    path: str  # felidae.senses.vision.detection_threshold
+    path: str  # <clade>.senses.<sense>.<slot>
     slot: str  # detection_threshold | measurement id | behaviour.<name>.latency_ms
     description: str | None
     record: dict[str, Any]
@@ -60,7 +60,7 @@ class Sense:
 class Clade:
     """A library entry."""
 
-    key: str  # file stem, lower case: felidae
+    key: str  # file stem, lower case
     doc: Located
     path: Path
     senses: dict[str, Sense] = field(default_factory=dict)

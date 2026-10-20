@@ -23,7 +23,7 @@ class Provenance(BaseModel):
     """Where one item of a response came from."""
 
     field: str = Field(description="slash path into this response, e.g. quantities/0/value")
-    source_file: str = Field(description="<repo>/<path>, e.g. profiles/library/felidae.yaml")
+    source_file: str = Field(description="<repo>/<path>, e.g. profiles/library/<clade>.yaml")
     line_or_key: int | str | None = Field(description="1-based line, or a key for non-text sources")
 
 
