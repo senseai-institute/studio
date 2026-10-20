@@ -6,7 +6,7 @@
 // here: every word comes from the research service, which has its own guardrails. Approvals
 // happen on the service's pending-action cards.
 
-import { badge, el } from "../dom.ts";
+import { badge, el, section } from "../dom.ts";
 
 const BASE = "/api/studio/research";
 
@@ -40,9 +40,10 @@ async function post(path: string, body: unknown): Promise<Response> {
 
 export function researchTab(body: HTMLElement, clade: string, sense: string): void {
   const focus = `${clade}.senses.${sense}`;
-  const box = el("section", "panel research");
-  const head = el("h2", undefined, "Research");
-  head.append(badge(`focus: ${focus}`, "teal"), badge("answers come from the research service", "muted"));
+  const sec = section("", "Research");
+  sec.tools.append(badge(`focus: ${focus}`, "teal"), badge("answers come from the research service, not Studio", "muted"));
+  const box = sec.box;
+  box.classList.add("research");
   const log = el("div", "chat");
   log.setAttribute("aria-live", "polite");
   const form = el("form", "chat-form");
@@ -52,7 +53,7 @@ export function researchTab(body: HTMLElement, clade: string, sense: string): vo
   const send = el("button", "btn primary", "Send");
   send.type = "submit";
   form.append(input, send);
-  box.append(head, log, form);
+  sec.body.append(log, form);
   body.replaceChildren(box);
 
   let conv: string | null = null;
@@ -89,7 +90,9 @@ export function researchTab(body: HTMLElement, clade: string, sense: string): vo
         }
       });
     }
-    c.append(why, ok, no, out);
+    const row = el("div", "row");
+    row.append(ok, no, out);
+    c.append(why, row);
     log.append(c);
   };
 

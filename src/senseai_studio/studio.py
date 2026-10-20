@@ -9,6 +9,7 @@ response, with ``provenance`` listing where each item came from.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -147,7 +148,7 @@ def _cite(snap: Snapshot, cid: str, fld: str, p: Prov) -> dict[str, Any]:
 def species(snap: Snapshot) -> dict[str, Any]:
     """Home: one card per clade, a chip per sense."""
     p = Prov()
-    cards = []
+    cards: list[dict[str, Any]] = []
     for ci, c in enumerate(snap.clades.values()):
         d = c.data
         lab = c.doc.label
@@ -166,6 +167,11 @@ def species(snap: Snapshot) -> dict[str, Any]:
                     "step": pl["at"],
                     "steps": pl["total"],
                     "complete": pl["complete"],
+                    "values": len(qs := c.quantities(s.id)),
+                    "sources": len({str(x) for q in qs for x in q.get("citations") or []}),
+                    "open_questions": sum(
+                        1 for _, k in c.open_questions(s.id) if k[0] != "open_questions"
+                    ),
                 }
             )
             p.add(f"cards/{ci}/senses/{si}/id", lab, c.doc.line("senses", s.index, "id"))
@@ -207,7 +213,28 @@ def species(snap: Snapshot) -> dict[str, Any]:
         ):
             if key in d:
                 p.add(f"cards/{ci}/{k}", lab, c.doc.line(key))
-    return {"cards": cards, "engine": snap.specs.engine, "provenance": p.out()}
+    chips: list[dict[str, Any]] = [x for c in cards for x in c["senses"]]
+    totals = {
+        "clades": len(cards),
+        "senses": len(chips),
+        "modelled": sum(1 for x in chips if x["state"] == "modelled"),
+        "described": sum(1 for x in chips if x["state"] == "described"),
+        "empty": sum(1 for x in chips if x["state"] == "empty"),
+        "values": sum(x["values"] for x in chips),
+        "references": len(snap.citations),
+        "open_questions": sum(x["open_questions"] for x in chips),
+    }
+    p.add("totals/references", "profiles/library/CITATIONS.md", "table rows")
+    return {
+        "cards": cards,
+        "totals": totals,
+        "engine": snap.specs.engine,
+        "modalities": sorted(
+            {x["modality"] for x in chips},
+            key=lambda m: (-sum(x["modality"] == m for x in chips), m),
+        ),
+        "provenance": p.out(),
+    }
 
 
 # --------------------------------------------------------------------------- sources
@@ -284,10 +311,79 @@ def sources(snap: Snapshot, clade: str, sense: str) -> dict[str, Any]:
 # --------------------------------------------------------------------------- model
 
 
-def _knob_matches(k: dict[str, Any], names: set[str], sense: str) -> bool:
-    who = {str(k.get(x, "")).lower() for x in ("species", "clade", "profile")} - {""}
-    s = k.get("sense")
-    return bool(who & names) and (s is None or s == sense)
+def _species_circuits(snap: Snapshot, spec: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Knob values a profile sets: its spec's ``circuits:`` section, else its prior bundle's.
+
+    circuits ``CircuitParams.from_bundle_meta`` reads ``meta["circuits"]``; the spec section is
+    what the P0 species file is expected to carry. Returns knob -> {value, source_file, line}.
+    """
+    from senseai_studio.prov import load_located
+
+    out: dict[str, dict[str, Any]] = {}
+    src = spec.get("source")
+    if src and Path(src).is_file():
+        doc = load_located(Path(src), prof.spec_label(snap.cfg, spec))
+        sec = (doc.data or {}).get("circuits") if isinstance(doc.data, dict) else None
+        for k, v in (sec or {}).items() if isinstance(sec, dict) else []:
+            out[str(k)] = {"value": v, "source_file": doc.label, "line": doc.line("circuits", k)}
+    priors = snap.cfg.profiles / prof.SPECS_DIR.parent / "priors"
+    for b in sorted(priors.glob(f"{spec['name']}.v*.json"), reverse=True):
+        try:
+            meta = json.loads(b.read_text())
+        except (OSError, ValueError):
+            continue
+        sec = meta.get("circuits") or (meta.get("meta") or {}).get("circuits")
+        for k, v in (sec or {}).items() if isinstance(sec, dict) else []:
+            out.setdefault(
+                str(k),
+                {"value": v, "source_file": rel(b, snap.cfg.profiles, "profiles"), "line": k},
+            )
+        break
+    return out
+
+
+def _circuits(snap: Snapshot, s: lib.Sense, readers: list[str], p: Prov) -> dict[str, Any]:
+    """The circuits block: registry knobs of the circuits serving this modality, per profile."""
+    circ = upstream.circuits(snap.cfg)
+    names = content.circuits(snap.cfg.content)
+    serving = [
+        k
+        for k, v in (names.data or {}).items()
+        if isinstance(v, dict) and s.modality in (v.get("modalities") or [])
+    ]
+    set_by = {r: _species_circuits(snap, snap.specs.specs[r]) for r in readers}
+    knobs: list[dict[str, Any]] = []
+    for k in circ.get("knobs", []):
+        if not isinstance(k, dict):
+            continue
+        name = str(k.get("name") or k.get("knob") or "")
+        prefix = name.split(".")[0]
+        if prefix not in serving:
+            continue
+        i = len(knobs)
+        species_values = [{"profile": r, **v[name]} for r, v in set_by.items() if name in v]
+        knobs.append(k | {"name": name, "circuit": prefix, "species_values": species_values})
+        p.add(f"circuits/knobs/{i}", f"cli:{snap.cfg.circuits_cmd} knobs --json", name)
+        for j, sv in enumerate(species_values):
+            p.add(f"circuits/knobs/{i}/species_values/{j}", sv["source_file"], sv["line"])
+    groups = [
+        {
+            "prefix": pre,
+            "name": (names.data or {}).get(pre, {}).get("name", pre),
+            "count": sum(1 for k in knobs if k["circuit"] == pre),
+        }
+        for pre in serving
+    ]
+    for i, pre in enumerate(serving):
+        p.add(f"circuits/groups/{i}", names.label, names.line(pre))
+    return {
+        "installed": bool(circ.get("installed")),
+        "ok": bool(circ.get("ok")),
+        "error": circ.get("error"),
+        "groups": [g for g in groups if g["count"]] if knobs else groups,
+        "knobs": knobs,
+        "species_set": sum(1 for k in knobs if k["species_values"]),
+    }
 
 
 def model(snap: Snapshot, clade: str, sense: str) -> dict[str, Any]:
@@ -295,20 +391,8 @@ def model(snap: Snapshot, clade: str, sense: str) -> dict[str, Any]:
     c, s = snap.sense(clade, sense)
     p = Prov()
     readers = snap.specs.profiles_reading(c, s.id)
-    names = {c.key, *readers, *[str(n).lower() for n in c.data.get("common_names") or []]}
     prefix = f"{c.key}.senses.{s.id}"
-
-    # circuits
-    circ = upstream.circuits(snap.cfg)
-    knobs = [
-        k for k in circ.get("knobs", []) if isinstance(k, dict) and _knob_matches(k, names, s.id)
-    ]
-    for i, k in enumerate(knobs):
-        p.add(
-            f"circuits/knobs/{i}",
-            f"cli:{snap.cfg.circuits_cmd} knobs --json",
-            str(k.get("knob") or k.get("name") or i),
-        )
+    circuits = _circuits(snap, s, readers, p)
 
     # profile rules
     profiles_out = []
@@ -412,12 +496,7 @@ def model(snap: Snapshot, clade: str, sense: str) -> dict[str, Any]:
         "sense": s.id,
         "engine": snap.specs.engine,
         "engine_error": snap.specs.error,
-        "circuits": {
-            "installed": bool(circ.get("installed")),
-            "ok": bool(circ.get("ok")),
-            "error": circ.get("error"),
-            "knobs": knobs,
-        },
+        "circuits": circuits,
         "profiles": profiles_out,
         "controls": snap.specs.controls(),
         "rulebook": {"present": rb["present"], "rules": rb["rules"]},

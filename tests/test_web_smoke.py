@@ -72,7 +72,7 @@ def test_home_to_every_tab(server: tuple[str, Settings], page: Any) -> None:
     url, _ = server
     pg = page
     pg.goto(f"{url}/")
-    pg.wait_for_selector(".species-card")
+    pg.wait_for_selector("table.atlas")
     assert pg.url.endswith("/studio")
     chip = pg.locator('[data-clade="felidae"] a[data-sense="vision"]')
     assert "MODELLED" in chip.inner_text().upper()
@@ -80,12 +80,17 @@ def test_home_to_every_tab(server: tuple[str, Settings], page: Any) -> None:
     pg.wait_for_selector(".quantity")
     q = pg.locator('[data-path="felidae.senses.vision.detection_threshold"]')
     assert "-0.74" in q.inner_text() and "UNVERIFIED" in q.inner_text().upper()
-    assert "doi.org/10.1152/jn.90641.2008" in q.locator("a").first.get_attribute("href")
-    assert "profiles/library/felidae.yaml:" in q.inner_text()
+    assert q.locator("sup.ref a").first.get_attribute("href") == "#ref-1"
+    ref1 = pg.locator("#ref-1")
+    assert "Kang" in ref1.inner_text()
+    assert "doi.org/10.1152/jn.90641.2008" in ref1.locator("a").first.get_attribute("href")
+    assert "profiles/library/felidae.yaml:" in q.locator("td.num").get_attribute("data-source")
+    q.click()  # expands conditions, notes, readers
+    assert "panther_vision.frame.gain_lut" in pg.locator("tr.detail").first.inner_text()
     step = pg.locator('[data-testid="pipeline-step"]')
     assert "3/10" in step.inner_text()
     for tab, sel, text in [
-        ("model", ".panel", "UNTRAINED"),
+        ("model", ".section", "UNTRAINED"),
         ("pipeline", ".checklist", "1 OF 2 ROWS VERIFIED"),
         ("use-cases", ".markdown", "STEP 3/10"),
         ("run", ".choices", "SYNTHETIC"),
@@ -120,7 +125,7 @@ def test_synthetic_run_streams(server: tuple[str, Settings], page: Any, path: st
 def test_dsec_run_draws_ring_over_frames(server: tuple[str, Settings], page: Any) -> None:
     url, _ = server
     text = _run(page, url, "felidae/vision", "dsec:zurich_city_fixture")
-    assert "Synthetic data" not in text.split("Live")[-1]
+    assert "Synthetic data" not in text.split("Observation")[-1]
     assert int(page.locator(".live").get_attribute("data-frames") or 0) >= 1
     assert page.locator(".live-stage img.frame").get_attribute("src")
     lit = page.evaluate(
@@ -131,8 +136,54 @@ def test_dsec_run_draws_ring_over_frames(server: tuple[str, Settings], page: Any
     assert lit > 100  # the ring and the fire marker were drawn
 
 
-def test_research_tab_when_configured(cfg: Settings) -> None:
-    c = replace(cfg, research_url="http://127.0.0.1:9")
-    from fastapi.testclient import TestClient
+def test_research_tab_against_fake_backend(cfg: Settings) -> None:
+    from tests import fake_research
 
-    assert TestClient(create_app(c)).get("/api/studio/health").json()["research"]["configured"]
+    rport, sport = _port(), _port()
+    servers = [
+        uvicorn.Server(
+            uvicorn.Config(fake_research.app, host="127.0.0.1", port=rport, log_level="warning")
+        ),
+        uvicorn.Server(
+            uvicorn.Config(
+                create_app(replace(cfg, research_url=f"http://127.0.0.1:{rport}")),
+                host="127.0.0.1",
+                port=sport,
+                log_level="warning",
+            )
+        ),
+    ]
+    threads = [threading.Thread(target=s.run, daemon=True) for s in servers]
+    for t in threads:
+        t.start()
+    for _ in range(100):
+        if all(s.started for s in servers):
+            break
+        time.sleep(0.05)
+    try:
+        with sync_api.sync_playwright() as p:
+            kw = {"executable_path": CHROMIUM} if Path(CHROMIUM).exists() else {}
+            b = p.chromium.launch(**kw)
+            pg = b.new_page()
+            pg.goto(f"http://127.0.0.1:{sport}/studio/strigidae/hearing/research")
+            pg.fill(".chat-form textarea", "Where does the 2 degree value come from?")
+            pg.click(".chat-form button")
+            pg.wait_for_selector(".action-card")
+            text = pg.locator(".chat").inner_text()
+            assert "senseai asked about strigidae.senses.hearing" in text
+            assert "READING STRIGIDAE.SENSES.HEARING" in text.upper()
+            pg.fill(".action-card textarea", "fits the barn owl data")
+            pg.click(".action-card .btn.primary")
+            pg.wait_for_selector(".action-card >> text=approved")
+            b.close()
+        assert fake_research.APPROVALS[-1] == {
+            "id": "a1",
+            "verb": "approve",
+            "rationale": "fits the barn owl data",
+            "user": "senseai",
+        }
+    finally:
+        for s in servers:
+            s.should_exit = True
+        for t in threads:
+            t.join(5)

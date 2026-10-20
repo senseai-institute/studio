@@ -23,6 +23,10 @@ export interface Chip {
   step: number;
   steps: number;
   profiles: string[];
+  values: number;
+  sources: number;
+  open_questions: number;
+  complete: boolean;
 }
 
 export interface Card {
@@ -42,6 +46,20 @@ export interface Card {
 export interface Species extends WithProv {
   cards: Card[];
   engine: string;
+  modalities: string[];
+  totals: { clades: number; senses: number; modelled: number; described: number; empty: number; values: number; references: number; open_questions: number };
+}
+
+export interface Knob {
+  name: string;
+  circuit: string;
+  unit: string;
+  default: number | boolean;
+  range: [number, number];
+  kind: string;
+  source: string;
+  doc: string;
+  species_values: { profile: string; value: unknown; source_file: string; line: number | string }[];
 }
 
 export interface Citation {
@@ -103,7 +121,7 @@ export interface Model extends WithProv {
   sense: string;
   engine: string;
   engine_error: string | null;
-  circuits: { installed: boolean; ok: boolean; error: string | null; knobs: Record<string, unknown>[] };
+  circuits: { installed: boolean; ok: boolean; error: string | null; groups: { prefix: string; name: string; count: number }[]; knobs: Knob[]; species_set: number };
   profiles: { name: string; description: string | null; spec_hash: string | null; source_file: string; control: boolean; bundles: number[] | null; fields: SpecField[] }[];
   controls: string[];
   rulebook: { present: boolean; rules: { id: string; status: string; sets: string; species: string; reads: string[]; source_file: string; line: number }[] };

@@ -35,6 +35,14 @@ def modalities(content: Path) -> Located:
     return load_located(p, "studio/content/modalities.yaml")
 
 
+def circuits(content: Path) -> Located:
+    """``circuits.yaml``: circuit knob prefix -> name, library modalities it serves."""
+    p = content / "circuits.yaml"
+    if not p.is_file():
+        return Located({}, {}, "studio/content/circuits.yaml")
+    return load_located(p, "studio/content/circuits.yaml")
+
+
 def pipeline_steps(content: Path, profiles: Path) -> Located:
     """The step list: the profiles checkout's ``docs/pipeline/steps.yaml`` when present."""
     up = profiles / "docs" / "pipeline" / "steps.yaml"

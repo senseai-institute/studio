@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Router. Plain links and full page loads; every page keeps its state in the URL.
-//   /studio                         Home: species × sense
-//   /studio/{clade}/{sense}[/{tab}] Workspace; tab is sources | model | run | pipeline | use-cases | research
+//   /studio                         the atlas: species × modality
+//   /studio/{clade}                 the clade's first modelled sense
+//   /studio/{clade}/{sense}[/{tab}] workspace; tab is sources | model | run | pipeline | use-cases | research
 
-import "./theme.css";
 import "./studio.css";
 import { el } from "./dom.ts";
 import { homePage } from "./pages/home.ts";
-import { workspacePage, TABS, type TabId } from "./pages/workspace.ts";
+import { cladePage, workspacePage, TABS, type TabId } from "./pages/workspace.ts";
 
 async function route(root: HTMLElement): Promise<void> {
   const parts = location.pathname.split("/").filter(Boolean).map(decodeURIComponent);
@@ -19,11 +19,9 @@ async function route(root: HTMLElement): Promise<void> {
   }
   const [, clade, sense, tab] = parts;
   if (!clade) return homePage(root);
-  if (clade && sense) {
-    const t = (TABS.find((x) => x.id === tab)?.id ?? "sources") as TabId;
-    return workspacePage(root, clade, sense, t);
-  }
-  root.replaceChildren(el("main", "loading", "Page not found."));
+  if (!sense) return cladePage(root, clade);
+  const t = (TABS.find((x) => x.id === tab)?.id ?? "sources") as TabId;
+  return workspacePage(root, clade, sense, t);
 }
 
 const root = document.getElementById("app")!;
