@@ -1,5 +1,5 @@
 {
- "_about": "Recorded from senseai-research@2bf63fa (scenario §11 turns 2-3, recorded model responses). Regenerate when research changes a payload; see research docs/API.md.",
+ "_about": "Recorded from senseai-research@886f831 by scripts/record_events.py (scenario §11 turns 2-3, recorded model responses). Re-record when research changes a payload.",
  "events": [
   {
    "event": "thinking_summary",
@@ -363,7 +363,7 @@
     "ok": true,
     "summary": "Proposed: Change felidae.senses.vision.detection_threshold",
     "refs": {
-     "pending_action_id": "act-01a156e4dcd1d7abad90"
+     "pending_action_id": "act-01a156ee4a6b1dac106e"
     }
    }
   },
@@ -371,11 +371,11 @@
    "event": "pending_action",
    "data": {
     "action": {
-     "id": "act-01a156e4dcd1d7abad90",
-     "created_at": "2026-10-20T01:20:01+00:00",
-     "created_by": "agent:conv-01a156e4db7ad0c07480",
+     "id": "act-01a156ee4a6b1dac106e",
+     "created_at": "2026-10-20T01:30:19+00:00",
+     "created_by": "agent:conv-01a156ee4931ba41d3a4",
      "kind": "claim_revision",
-     "conversation_id": "conv-01a156e4db7ad0c07480",
+     "conversation_id": "conv-01a156ee4931ba41d3a4",
      "tool_use_id": "toolu_rec_05",
      "input": {
       "claim_id": "lib:felidae.senses.vision.detection_threshold",
@@ -431,7 +431,7 @@
    "data": {
     "stop": "pending_action",
     "pending": [
-     "act-01a156e4dcd1d7abad90"
+     "act-01a156ee4a6b1dac106e"
     ],
     "usage": {
      "model_calls": 1,
@@ -559,17 +559,17 @@
    "id": "toolu_rec_05",
    "ok": true,
    "refs": {
-    "pending_action_id": "act-01a156e4dcd1d7abad90"
+    "pending_action_id": "act-01a156ee4a6b1dac106e"
    }
   },
   {
    "kind": "card",
    "action": {
-    "id": "act-01a156e4dcd1d7abad90",
-    "created_at": "2026-10-20T01:20:01+00:00",
-    "created_by": "agent:conv-01a156e4db7ad0c07480",
+    "id": "act-01a156ee4a6b1dac106e",
+    "created_at": "2026-10-20T01:30:19+00:00",
+    "created_by": "agent:conv-01a156ee4931ba41d3a4",
     "kind": "claim_revision",
-    "conversation_id": "conv-01a156e4db7ad0c07480",
+    "conversation_id": "conv-01a156ee4931ba41d3a4",
     "tool_use_id": "toolu_rec_05",
     "input": {
      "changes": {

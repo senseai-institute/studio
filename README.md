@@ -22,8 +22,8 @@ signed-in name (`X-SenseAI-User`) and the shared secret (`X-SenseAI-Proxy-Token`
   research's `docs/API.md`; the schemas are at `/api/studio/research/openapi.json`.
 - `web/src/research/adapt.ts`: research payloads and chat events → what Studio renders. Its
   tests run against events recorded from the research service
-  (`web/src/research/fixtures/research_events.json`); re-record them when research changes a
-  payload.
+  (`web/src/research/fixtures/research_events.json`); re-record them with research's
+  `packages/senseai-research/scripts/record_events.py` when research changes a payload.
 - `web/src/tabs/research.ts`: the tab. Chat on the left; on the right *To check* (this
   clade's least-verified values and open questions), *Claim*, *Impact*, *Experiment* and
   *Settings* (which API keys the research service has, with a *Test* button each).
