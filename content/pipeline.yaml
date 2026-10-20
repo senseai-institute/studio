@@ -1,0 +1,73 @@
+# SenseAI Studio: the ten steps of the species pipeline, and how Studio tells each is done.
+#
+# Studio prefers <profiles>/docs/pipeline/steps.yaml when the profiles checkout has one (same
+# format); this file is the default until then. Each step names a `check` Studio knows how to
+# run; patterns may use {profiles} {stack} {clade} {sense} {species}, where {species} is each
+# profile that reads this clade+sense (and the clade key itself).
+#
+# checks
+#   front_matter  a Markdown/YAML file whose front matter names the clade or species and has
+#                 every key in `fields`
+#   library       the library entry holds at least one cited value for the sense
+#   table         rows of the evidence table; done when every row is verified
+#   rules         rulebook rules for this clade+sense; done when all have an accepted status
+#   committed     a file committed to git (hash and date)
+#   records       YAML/JSON records naming the clade or species; done when one has `require`
+steps:
+  - n: 1
+    id: job
+    name: Job and proxy
+    check: front_matter
+    paths: ["{profiles}/docs/pipeline/species/*.md", "{profiles}/docs/pipeline/*.md"]
+    fields: [job, proxy]
+  - n: 2
+    id: sources
+    name: Sources found
+    check: library
+  - n: 3
+    id: table
+    name: Evidence table verified
+    check: table
+    paths: ["{profiles}/library/tables/{clade}.{sense}.csv"]
+    verified: [verified]
+  - n: 4
+    id: rules
+    name: Rules written
+    check: rules
+    paths: ["{profiles}/rulebook/*.yaml"]
+    accepted: [accepted, active, frozen]
+  - n: 5
+    id: species_file
+    name: Species file committed
+    check: committed
+    paths: ["{profiles}/packages/senseai-profiles/profiles/{species}.profile.yaml"]
+  - n: 6
+    id: controls
+    name: Controls generated
+    check: records
+    paths: ["{stack}/bench/controls/*.yaml", "{stack}/bench/prereg/controls/*.yaml"]
+    require: controls
+  - n: 7
+    id: prereg
+    name: Pre-registration frozen
+    check: records
+    paths: ["{stack}/bench/prereg/*.yaml"]
+    require: hash
+  - n: 8
+    id: e_run
+    name: E-run verdict
+    check: records
+    paths: ["{stack}/bench/runs/*/verdict.json"]
+    require: verdict
+  - n: 9
+    id: ablation
+    name: Ablation done
+    check: records
+    paths: ["{stack}/bench/runs/*/ablation.json"]
+    require: verdict
+  - n: 10
+    id: certificate
+    name: Certificate
+    check: records
+    paths: ["{profiles}/registry/{species}/v*.json"]
+    require: certificate

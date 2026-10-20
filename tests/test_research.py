@@ -1,0 +1,76 @@
+# Copyright 2026 SenseAI Institute
+# SPDX-License-Identifier: Apache-2.0
+"""The research proxy against a fake research backend (httpx MockTransport)."""
+
+from __future__ import annotations
+
+import base64
+import json
+
+import httpx
+from fastapi.testclient import TestClient
+
+from senseai_studio.app import create_app
+from senseai_studio.settings import Settings
+from tests.conftest import with_
+
+SEEN: list[httpx.Request] = []
+
+
+def fake_research(request: httpx.Request) -> httpx.Response:
+    SEEN.append(request)
+    if request.url.path == "/api/research/health":
+        return httpx.Response(200, json={"ok": True})
+    if request.url.path == "/api/research/conversations" and request.method == "POST":
+        return httpx.Response(201, json={"id": "c1"})
+    if request.url.path.endswith("/messages"):
+        body = json.loads(request.content)
+        stream = (
+            "event: text_delta\n"
+            f"data: {json.dumps({'text': 'focus ' + body['focus']['library_path']})}\n\n"
+            "event: done\ndata: {}\n\n"
+        )
+        return httpx.Response(200, text=stream, headers={"content-type": "text/event-stream"})
+    return httpx.Response(404, json={"detail": "nope"})
+
+
+def test_proxy_off_without_url(client: TestClient) -> None:
+    assert client.get("/api/studio/research/health").status_code == 404
+
+
+def test_proxy_forwards_user_and_streams(cfg: Settings) -> None:
+    SEEN.clear()
+    app = create_app(
+        with_(cfg, research_url="http://127.0.0.1:8100", password="pw"),
+        research_transport=httpx.MockTransport(fake_research),
+    )
+    c = TestClient(app)
+    auth = {"Authorization": "Basic " + base64.b64encode(b"ana:pw").decode()}
+    assert c.get("/api/studio/research/health").status_code == 401
+    assert c.get("/api/studio/research/health", headers=auth).json() == {"ok": True}
+    conv = c.post("/api/studio/research/conversations", headers=auth, json={}).json()
+    r = c.post(
+        f"/api/studio/research/conversations/{conv['id']}/messages",
+        headers=auth,
+        json={"text": "hi", "focus": {"library_path": "strigidae.senses.hearing"}},
+    )
+    assert r.headers["content-type"].startswith("text/event-stream")
+    assert "focus strigidae.senses.hearing" in r.text
+    assert all(q.headers["x-senseai-user"] == "ana" for q in SEEN)
+    assert all("authorization" not in q.headers for q in SEEN)
+    assert str(SEEN[0].url) == "http://127.0.0.1:8100/api/research/health"
+    h = c.get("/api/studio/health").json()
+    assert h["research"]["configured"]
+
+
+def test_proxy_unreachable(cfg: Settings) -> None:
+    def boom(_r: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused")
+
+    c = TestClient(
+        create_app(
+            with_(cfg, research_url="http://127.0.0.1:1"),
+            research_transport=httpx.MockTransport(boom),
+        )
+    )
+    assert c.get("/api/studio/research/health").status_code == 502
