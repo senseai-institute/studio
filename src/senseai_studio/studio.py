@@ -590,7 +590,11 @@ def health(snap: Snapshot) -> dict[str, Any]:
         "engine_error": snap.specs.error,
         "spec_issues": snap.specs.issues,
         "circuits": upstream.circuits(cfg).get("installed", False),
-        "research": {"configured": cfg.research_url is not None, "url": cfg.research_url},
+        "research": {
+            "configured": cfg.research_url is not None,
+            "url": cfg.research_url,
+            "token": cfg.research_token is not None,
+        },
         "data_root": {
             "path": str(cfg.data_root) if cfg.data_root else None,
             "exists": bool(cfg.data_root and cfg.data_root.is_dir()),

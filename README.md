@@ -81,11 +81,32 @@ use the viewer runner's names (see [`.env.example`](.env.example)):
 - `SENSEAI_BENCH_CMD`
 - `SENSEAI_BENCH_PYTHON`
 - `SENSEAI_WORLD_CKPT` + `SENSEAI_TOKENS_YAML`
-- `RESEARCH_URL`
+- `RESEARCH_URL`, `RESEARCH_PROXY_TOKEN`
 - `STUDIO_CONTENT`
 - `VIEWER_PASSWORD`, with user `senseai`
 
 Basic auth covers everything except `/healthz` and `/api/studio/health`.
+
+## The Research tab (senseai-institute/research)
+
+The research service is the backend and the source of truth for the evidence ledger, the
+research assistant, impact previews, experiments and library proposals. Studio reaches it
+through its own proxy, `/api/studio/research/*` → `RESEARCH_URL/api/research/*`, adding the
+signed-in name (`X-SenseAI-User`) and the shared secret (`X-SenseAI-Proxy-Token`, from
+`RESEARCH_PROXY_TOKEN`). Headers of those names sent by the browser are dropped.
+
+- `web/src/research/client.ts`: a typed call for every research route. The contract is
+  research's `docs/API.md`; the schemas are at `/api/studio/research/openapi.json`.
+- `web/src/research/adapt.ts`: research payloads and chat events → what Studio renders. Its
+  tests run against events recorded from the research service
+  (`web/src/research/fixtures/research_events.json`); re-record them with research's
+  `packages/senseai-research/scripts/record_events.py` when research changes a payload.
+- `web/src/tabs/research.ts`: the tab. Chat on the left; on the right *To check* (this
+  clade's least-verified values and open questions), *Claim*, *Impact*, *Experiment* and
+  *Settings* (which API keys the research service has, with a *Test* button each).
+
+To run both on Railway, follow research's `docs/DEPLOY.md`: set `RESEARCH_URL` and
+`RESEARCH_PROXY_TOKEN` here, and the same token on the research service.
 
 ## Deploy on Railway
 
@@ -98,7 +119,8 @@ Set these service variables:
 | `SENSEAI_PROFILES_GIT` | yes | `https://github.com/senseai-institute/profiles`, cloned at start (shallow) |
 | `GITHUB_TOKEN` | if profiles is private | a read-only token for that repo. It is used for the clone and removed from the checkout's git config |
 | `SENSEAI_PROFILES_REF` | no | branch or tag to deploy (default: the repo's default branch) |
-| `RESEARCH_URL` | no | shows the Research tab |
+| `RESEARCH_URL` | no | shows the Research tab: `http://${{research.RAILWAY_PRIVATE_DOMAIN}}:8100` |
+| `RESEARCH_PROXY_TOKEN` | with `RESEARCH_URL` | `${{research.RESEARCH_PROXY_TOKEN}}`, the shared secret research checks |
 
 Railway sets `PORT` itself. The clone is refreshed on each deploy or restart. Without a bench
 stack in the container, every screen except Run works, and Run says why it cannot.
@@ -149,7 +171,7 @@ owls/hearing, and checks that a DSEC-layout recording draws the ring over frames
 The no-hard-coding rule is checked with:
 
 ```bash
-grep -rniE "felid|strigid|panther|vision|hearing" src/senseai_studio web/src --include=*.py --include=*.ts
+grep -rniE "\b(felid|strigid|panther|vision|hearing)" src/senseai_studio web/src --include=*.py --include=*.ts
 ```
 
 It prints nothing (test files aside). Species, senses and numbers all arrive through the API.

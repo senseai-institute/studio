@@ -43,6 +43,7 @@ class Settings:
     artefacts: Path | None = None
     circuits_cmd: str = "senseai-circuits"
     research_url: str | None = None
+    research_token: str | None = None
     content: Path = Path("content")
     data_dir: Path = Path("data")
     password: str | None = None
@@ -79,6 +80,7 @@ class Settings:
             artefacts=_path("SENSEAI_ARTEFACTS"),
             circuits_cmd=os.environ.get("SENSEAI_CIRCUITS_CMD") or "senseai-circuits",
             research_url=(os.environ.get("RESEARCH_URL") or "").rstrip("/") or None,
+            research_token=os.environ.get("RESEARCH_PROXY_TOKEN") or None,
             content=_path("STUDIO_CONTENT") or default_content(),
             data_dir=_path("STUDIO_DATA") or Path("data"),
             password=os.environ.get("VIEWER_PASSWORD") or None,

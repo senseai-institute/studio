@@ -74,3 +74,30 @@ def test_proxy_unreachable(cfg: Settings) -> None:
         )
     )
     assert c.get("/api/studio/research/health").status_code == 502
+
+
+def test_proxy_sends_the_shared_token_and_drops_spoofed_identity(cfg: Settings) -> None:
+    SEEN.clear()
+    app = create_app(
+        with_(cfg, research_url="http://research.internal:8100", research_token="s3cret"),
+        research_transport=httpx.MockTransport(fake_research),
+    )
+    c = TestClient(app)
+    spoof = {"X-SenseAI-User": "mallory", "x-senseai-proxy-token": "guess"}
+    assert c.get("/api/studio/research/health", headers=spoof).status_code == 200
+    (q,) = SEEN
+    assert q.headers.get_list("x-senseai-user") == ["senseai"], "only the proxy's own name"
+    assert q.headers.get_list("x-senseai-proxy-token") == ["s3cret"]
+    assert c.get("/api/studio/health").json()["research"]["token"] is True
+
+
+def test_no_token_header_without_a_token(cfg: Settings) -> None:
+    SEEN.clear()
+    app = create_app(
+        with_(cfg, research_url="http://127.0.0.1:8100"),
+        research_transport=httpx.MockTransport(fake_research),
+    )
+    TestClient(app).get(
+        "/api/studio/research/health", headers={"X-SenseAI-Proxy-Token": "from-browser"}
+    )
+    assert "x-senseai-proxy-token" not in SEEN[0].headers
