@@ -1,62 +1,57 @@
 // Copyright 2026 SenseAI Institute
 // SPDX-License-Identifier: Apache-2.0
 //
-// Run: pick a data source and arms, press Run, watch it live, then read the side-by-side. Every
-// option the server cannot run stays visible with the reason; banners say what a run is not.
+// Run: §1 Protocol (data, arms, duration), §2 Observation (live), §3 Result (side by side and
+// the replay report). Every option the server cannot run stays visible with its reason;
+// banners say what a run is not.
 
 import { api, type Job, type RunOptions } from "../api.ts";
-import { badge, el, empty, inspect, panel } from "../dom.ts";
+import { badge, el, empty, inspect, link, section, srcRef, table, tags, td } from "../dom.ts";
 import { day, ms, pct } from "../format.ts";
 import { liveView, type Live } from "../live.ts";
 
-function banners(job: Job | null, opts: RunOptions, sourceSynthetic: boolean, preregistered: boolean): HTMLElement {
+function banners(job: Job | null, opts: RunOptions, synthetic: boolean, preregistered: boolean): HTMLElement {
   const b = el("div", "banners");
-  if (sourceSynthetic) b.append(el("p", "banner warn", "Synthetic data: shows the pipeline, not a result."));
-  if (!preregistered) b.append(el("p", "banner muted", "Not pre-registered: an exploratory run, not evidence for a claim."));
-  if (job?.arms.some((a) => a.world === "prior")) b.append(el("p", "banner muted", "World: structured prior (no training)."));
-  if (opts.arms.every((a) => a.role !== "species")) b.append(el("p", "banner muted", "No profile reads this sense yet: only the control runs."));
+  if (synthetic) b.append(el("p", "banner warn", "Synthetic data: shows the pipeline, not a result."));
+  if (!preregistered) b.append(el("p", "banner", "Not pre-registered: an exploratory run, not evidence for a claim."));
+  if (job?.arms.some((a) => a.world === "prior")) b.append(el("p", "banner", "World: structured prior (no training)."));
+  if (opts.arms.every((a) => a.role !== "species")) b.append(el("p", "banner", "No profile reads this sense yet: only the control runs."));
   return b;
 }
 
-function summaryTable(job: Job): HTMLElement {
-  const t = el("table", "grid side-by-side");
-  const head = el("tr");
-  ["arm", "sequence", "caught", "median delay", "false fires / h", "latency p50", "latency p99"].forEach((h) => head.append(el("th", undefined, h)));
-  const th = el("thead");
-  th.append(head);
-  const tb = el("tbody");
+function resultTable(job: Job): HTMLElement {
+  const { wrap, tb } = table(["arm", "sequence", ["caught", "num"], ["median delay", "num"], ["false fires / h", "num"], ["latency p50", "num"], ["latency p99", "num"]]);
   for (const s of job.summaries) {
     const tr = el("tr");
-    const err = s.error ? String(s.error) : null;
-    tr.append(el("td", "mono", job.arms.find((a) => a.bench_arm === s.arm)?.id ?? String(s.arm ?? "")), el("td", "mono", String(s.sequence ?? "")));
-    if (err) {
-      const td = el("td", "error", err);
-      td.colSpan = 5;
-      tr.append(td);
+    tr.append(td(el("span", "mono", job.arms.find((a) => a.bench_arm === s.arm)?.id ?? String(s.arm ?? ""))), td(el("span", "mono", String(s.sequence ?? ""))));
+    if (s.error) {
+      const c = el("td", "error", String(s.error));
+      c.colSpan = 5;
+      tr.append(c);
     } else {
       tr.append(
-        el("td", "mono", s.hit_rate === null || s.hit_rate === undefined ? "— (no labels)" : pct(s.hit_rate)),
-        el("td", "mono", typeof s.median_delay_s === "number" ? `${s.median_delay_s.toFixed(2)} s` : "—"),
-        el("td", "mono", typeof s.unattributed_fires_per_h === "number" ? s.unattributed_fires_per_h.toFixed(1) : "—"),
-        el("td", "mono", ms(s.latency_p50_ms)),
-        el("td", "mono", ms(s.latency_p99_ms)),
+        td(s.hit_rate === null || s.hit_rate === undefined ? "— (no labels)" : pct(s.hit_rate), "num"),
+        td(typeof s.median_delay_s === "number" ? `${s.median_delay_s.toFixed(2)} s` : "—", "num"),
+        td(typeof s.unattributed_fires_per_h === "number" ? s.unattributed_fires_per_h.toFixed(1) : "—", "num"),
+        td(ms(s.latency_p50_ms), "num"),
+        td(ms(s.latency_p99_ms), "num"),
       );
     }
     tb.append(tr);
   }
-  t.append(th, tb);
-  return t;
+  return wrap;
 }
 
 export async function runTab(body: HTMLElement, clade: string, sense: string): Promise<void> {
   const [opts, recent] = await Promise.all([api.runOptions(clade, sense), api.jobs(clade, sense).catch(() => [] as Job[])]);
   body.replaceChildren();
-  const form = panel("Run in real time");
-  if (!opts.bench.found) form.head.append(badge("senseai-bench not found", "alert", opts.bench.error ?? ""));
-  const bannerSlot = el("div");
-  form.body.append(bannerSlot);
 
-  // sources
+  // §1 protocol
+  const s1 = section("§1", "Protocol");
+  s1.tools.append(opts.bench.found ? badge("senseai-bench", "teal", Object.entries(opts.bench.features).map(([k, v]) => `${k}: ${v ? "yes" : "no"}`).join("\n")) : badge("senseai-bench not found", "alert", opts.bench.error ?? ""));
+  const bannerSlot = el("div");
+  const grid = el("div", "grid-2");
+
   const srcBox = el("fieldset", "choices");
   srcBox.append(el("legend", undefined, "Data"));
   if (!opts.sources.length) srcBox.append(empty(`No data for this sense yet: no stream is defined for the ${opts.modality} modality.`));
@@ -76,15 +71,15 @@ export async function runTab(body: HTMLElement, clade: string, sense: string): P
       source = s.id;
       update();
     });
-    lab.append(r, " ", s.synthetic ? `Synthetic (${(s.streams ?? []).join(" + ").toLowerCase()})` : `${s.dataset} · ${s.name}`, " ");
-    if (s.synthetic) lab.append(badge("synthetic", "warn"));
-    else lab.append(badge(s.labelled ? "labelled" : "no labels", s.labelled ? "teal" : "muted"));
+    const what = el("span", "what");
+    if (s.synthetic) what.append(el("span", undefined, "Synthetic stream"), el("span", "faint mono small", (s.streams ?? []).join(" + ").toLowerCase()), badge("synthetic", "warn"));
+    else what.append(el("span", "mono", s.name), el("span", "faint small", s.dataset), badge(s.labelled ? "labelled" : "no labels", s.labelled ? "teal" : "muted"));
+    lab.append(r, what);
     if (!s.available) lab.append(el("span", "reason", s.reason));
     srcBox.append(lab);
   }
-  if (opts.sources.length && opts.sources.every((s) => s.synthetic)) srcBox.append(el("p", "muted small", "No recordings for this sense under SENSEAI_DATA_ROOT yet: synthetic only."));
+  if (opts.sources.length && opts.sources.every((s) => s.synthetic)) srcBox.append(el("p", "faint small", "No recordings for this modality under SENSEAI_DATA_ROOT yet: synthetic only."));
 
-  // arms
   const armBox = el("fieldset", "choices");
   armBox.append(el("legend", undefined, "Arms"));
   const picked = new Set<string>();
@@ -103,41 +98,51 @@ export async function runTab(body: HTMLElement, clade: string, sense: string): P
       else picked.delete(a.id);
       update();
     });
-    const role = a.role === "control" ? "control: same pipeline, no species prior" : a.role === "learned" ? "learned world" : "species profile";
-    lab.append(c, " ", el("span", "mono", a.profile), ` on the ${a.world === "prior" ? "structured prior" : "learned world"} `, badge(role, a.role === "species" ? "teal" : "muted"));
-    if (a.world === "learned" && !a.available) lab.append(badge("untrained", "warn"));
+    const role = a.role === "control" ? "control" : a.role === "learned" ? "learned world" : "species";
+    const what = el("span", "what");
+    what.append(el("span", "mono", a.profile), el("span", "faint small", a.world === "prior" ? "structured prior" : `${a.world} world`), badge(role, a.role === "species" ? "teal" : "muted", a.role === "control" ? "same pipeline, no species prior" : ""));
+    if (a.world === "learned" && !a.available) what.append(badge("untrained", "warn"));
+    lab.append(c, what);
     if (!a.available) lab.append(el("span", "reason", a.reason));
+    else if (a.description) lab.append(el("span", "reason", a.description));
     armBox.append(lab);
   }
+  grid.append(srcBox, armBox);
 
+  const bar = el("div", "run-bar");
   const secs = el("input");
   secs.type = "number";
   secs.min = "1";
   secs.max = "600";
   secs.value = "10";
-  const secsLab = el("label", "seconds");
-  secsLab.append("Seconds ", secs);
+  const secsLab = el("label");
+  secsLab.append("Duration", secs, "s");
   const go = el("button", "btn primary", "Run");
   go.type = "button";
-  const note = el("span", "note-inline muted");
-  const actions = el("div", "actions");
-  actions.append(secsLab, go, note);
-  form.body.append(srcBox, armBox, actions);
+  const note = el("span", "faint small");
+  bar.append(secsLab, go, note);
 
+  const pre = el("div");
   if (opts.prereg.length) {
     const pr = opts.prereg[0];
-    const p = el("p", "prereg");
-    p.append(badge("pre-registered", "teal"), ` ${pr.id ?? ""} frozen ${day(pr.frozen_at)} · hash ${pr.hash ?? "—"} · clips ${pr.clips.join(", ") || "—"} `, el("span", "src mono", pr.file));
-    if (pr.verdict) p.append(" ", badge(`verdict: ${pr.verdict}`, "teal"), " ", el("span", "src mono", pr.verdict_file ?? ""));
-    else p.append(" ", badge("no verdict yet", "muted"));
-    form.body.append(p);
-  } else {
-    form.body.append(el("p", "muted small", "No frozen pre-registration for this species+sense: every run here is exploratory."));
-  }
+    const p = el("p", "note");
+    p.append(tags(badge("pre-registered", "teal"), pr.verdict ? badge(`verdict: ${pr.verdict}`, "teal") : badge("no verdict yet", "muted")), ` ${pr.id ?? ""} · frozen ${day(pr.frozen_at)} · hash ${pr.hash ?? "—"} · clips ${pr.clips.join(", ") || "—"} `, srcRef(pr.file));
+    if (pr.verdict_file) p.append(" ", srcRef(pr.verdict_file));
+    pre.append(p);
+  } else pre.append(el("p", "faint small", "No frozen pre-registration for this species and sense: every run here is exploratory."));
+  s1.body.append(bannerSlot, grid, bar, pre);
+  body.append(s1.box);
 
+  // §2 observation, §3 result
+  const s2 = section("§2", "Observation");
   const liveSlot = el("div");
+  liveSlot.append(empty("Press Run to stream the pipeline live: the frame with the bearing ring, surprise per arm, the reflex state and its fires."));
+  s2.body.append(liveSlot);
+  const s3 = section("§3", "Result");
   const resultSlot = el("div");
-  body.append(form.box, liveSlot, resultSlot);
+  resultSlot.append(empty("The side-by-side appears here when a run ends."));
+  s3.body.append(resultSlot);
+  body.append(s2.box, s3.box);
 
   const update = () => {
     const src = opts.sources.find((s) => s.id === source);
@@ -153,9 +158,9 @@ export async function runTab(body: HTMLElement, clade: string, sense: string): P
   const follow = async (job: Job) => {
     live?.close();
     live = liveView(job.id, opts.view, Object.fromEntries(job.arms.map((a) => [a.bench_arm ?? a.id, a.id])));
-    const b = banners(job, opts, job.synthetic, job.preregistered);
-    liveSlot.replaceChildren(b, live.box);
-    resultSlot.replaceChildren();
+    liveSlot.replaceChildren(banners(job, opts, job.synthetic, job.preregistered), live.box);
+    resultSlot.replaceChildren(el("p", "empty", "running…"));
+    s2.box.scrollIntoView({ behavior: "smooth", block: "start" });
     await live.done;
     let j = job;
     for (let i = 0; i < 40; i++) {
@@ -163,16 +168,17 @@ export async function runTab(body: HTMLElement, clade: string, sense: string): P
       if (j.status !== "running" && j.status !== "cancelling") break;
       await new Promise((r) => setTimeout(r, 250));
     }
-    const res = panel("Side by side");
-    res.head.append(badge(j.status, j.status === "succeeded" ? "teal" : j.status === "failed" ? "alert" : "muted"));
-    if (j.error) res.body.append(el("p", "error", j.error));
-    if (j.headline) res.body.append(el("p", "headline", j.headline));
-    if (j.summaries.length) res.body.append(summaryTable(j));
-    const rep = el("a", undefined, "replay report");
-    rep.href = `/api/studio/jobs/${encodeURIComponent(j.id)}/report`;
-    rep.target = "_blank";
-    res.body.append(el("p", "small muted", `run ${j.id} · `), rep);
-    resultSlot.replaceChildren(res.box);
+    const out = el("div");
+    out.style.display = "grid";
+    out.style.gap = "10px";
+    out.append(tags(badge(j.status, j.status === "succeeded" ? "teal" : j.status === "failed" ? "alert" : "muted"), j.synthetic ? badge("synthetic", "warn") : null, j.preregistered ? badge("pre-registered clip", "teal") : badge("not pre-registered", "muted")));
+    if (j.error) out.append(el("p", "note alert", j.error));
+    if (j.headline) out.append(el("p", "headline", j.headline));
+    if (j.summaries.length) out.append(resultTable(j));
+    const foot = el("p", "faint small");
+    foot.append(`run ${j.id} · `, link("replay report", `/api/studio/jobs/${encodeURIComponent(j.id)}/report`, true));
+    out.append(foot);
+    resultSlot.replaceChildren(out);
     resultSlot.dataset.status = j.status;
   };
 
@@ -195,16 +201,20 @@ export async function runTab(body: HTMLElement, clade: string, sense: string): P
   if (running) void follow(running);
 
   if (recent.length) {
-    const h = panel("Recent runs");
-    const ul = el("ul", "recent");
+    const h = section("", "Previous runs");
+    const { wrap, tb } = table(["run", "status", "data", "arms", "caveats"]);
     for (const j of recent) {
-      const li = el("li");
-      li.append(el("span", "mono", j.id), " ", badge(j.status, j.status === "succeeded" ? "teal" : j.status === "failed" ? "alert" : "muted"), ` ${j.source.name} · ${j.arms.map((a) => a.id).join(", ")}`);
-      if (j.synthetic) li.append(" ", badge("synthetic", "warn"));
-      if (!j.preregistered) li.append(" ", badge("not pre-registered", "muted"));
-      ul.append(li);
+      const tr = el("tr");
+      tr.append(
+        td(el("span", "mono small", j.id)),
+        td(badge(j.status, j.status === "succeeded" ? "teal" : j.status === "failed" ? "alert" : "muted")),
+        td(j.source.name),
+        td(el("span", "mono small", j.arms.map((a) => a.id).join(", "))),
+        td(tags(j.synthetic ? badge("synthetic", "warn") : null, j.preregistered ? null : badge("not pre-registered", "muted"))),
+      );
+      tb.append(tr);
     }
-    h.body.append(ul);
+    h.body.append(wrap);
     body.append(h.box);
   }
   body.append(inspect(opts));

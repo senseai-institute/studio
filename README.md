@@ -38,19 +38,21 @@ Two rules shape Studio:
 
 | | |
 |---|---|
-| **Home** (`/studio`) | One card per library entry, with a chip per sense: *modelled* (a profile reads it, from `research.consumers_by_path`), *described* (cited values, no profile) or *empty*. Badges show data available or synthetic only, the pipeline step, and the library review status. |
-| **Sources** | Every value of the sense: value, unit, conditions, species, confidence, the paper (authors, year, title, DOI from `CITATIONS.md`, how much was read) and verification status/quote from the P0 evidence table. Open questions and research requests for the sense. |
-| **Model** | *Circuits* (`senseai-circuits knobs --json`, else "not installed") and the rulebook. *Profile rules*: each head/reflex field, the rule that sets it, the library path it reads, the computed value. *World prior*: `PriorParams.from_library(<clade>.yaml).provenance()`, measured / proposed / physics. *Learned networks*: checkpoints (params, model id, tokenizer, training data) or "untrained". *Reflex*: commit threshold per profile. |
+| **Atlas** (`/studio`) | Totals across the library, then a species × modality matrix. Each cell is a sense: *modelled* (a profile reads it, from `research.consumers_by_path`), *described* (cited values, no profile) or *empty*, with its counts of values, sources and open questions and a ten-step progress bar. A sidebar index, search (`/`), a provenance toggle (`p`), light/dark (`t`) and tab keys (`1`–`6`) work on every page. |
+| **Sources** | A table of every value of the sense (value, unit, species, confidence, verification) with numbered references. Rows expand to conditions, notes, the verbatim quote and the model parameters that read the value. Below: open questions and research requests, then the bibliography from `CITATIONS.md` (DOI, how much was read, copy reference). |
+| **Model** | *Fig. 1* traces every cited value to the rules and model parameters it sets. *Circuits*: the senseai-circuits knob registry, grouped by circuit (only those serving this modality), each knob's species value or "circuit default", range, kind (measured / proposed / physics) and basis; plus the rulebook. *Profile rules*: each head/reflex field, the rule that sets it, the library path it reads, the computed value. *World prior*: `PriorParams.from_library(<clade>.yaml).provenance()`, measured / proposed / physics. *Learned networks*: checkpoints (params, model id, tokenizer, training data) or "untrained". *Reflex*: commit threshold per profile. |
 | **Run** | Pick a data source (a DSEC recording under `SENSEAI_DATA_ROOT`, or *synthetic*) and arms (each profile that reads the sense on the structured prior; the control profile; learned arms only with a checkpoint), then press Run. While it runs: the latest frame with the bearing ring, global surprise per arm, the reflex state, latency p99, and fires as they happen. Afterwards: the side-by-side and the replay report. Banners: *synthetic*, *not pre-registered*, *structured prior*. Links the frozen pre-registration and its verdict when bench has one. |
 | **Pipeline** | The ten steps (`content/pipeline.yaml`, or profiles' `docs/pipeline/steps.yaml`) as a checklist with dates and evidence, and the clock: days since step 1, *partial* when steps were done out of order. |
 | **Use cases** | `content/use_cases/<niche>.<sense>.md`, rendered, with the pipeline step beside every claim. |
 | **Research** | Only when `RESEARCH_URL` is set: the research service's chat focused on `<clade>.senses.<sense>`, with its approval cards. |
 
-Screenshots of the two acceptance walks (real stack, structured prior, no training) are in
+Screenshots on the real stack (structured prior, no training, circuits P1) are in
 [`docs/screens/`](docs/screens):
 
 - owls → hearing: `strigidae-hearing-*.png`
 - cats → vision: `felidae-vision-*.png`
+- cats → hearing: `felidae-hearing-*.png`
+- dark theme: `dark-*.png`
 
 ## Run it
 

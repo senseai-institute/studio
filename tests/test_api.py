@@ -112,12 +112,9 @@ def test_model_cats_vision(client: TestClient) -> None:
     assert [p["name"] for p in body["profiles"]] == ["panther", "panther_vision"]
     gl = next(f for f in body["profiles"][1]["fields"] if f["field"] == "gain_lut")
     assert gl["kind"] == "rule" and gl["reads_this_sense"]
-    assert body["circuits"] == {
-        "installed": False,
-        "ok": False,
-        "error": "circuits: not installed",
-        "knobs": [],
-    }
+    circ = body["circuits"]
+    assert (circ["installed"], circ["ok"], circ["knobs"]) == (False, False, [])
+    assert [g["prefix"] for g in circ["groups"]] == ["cs", "emd", "lgmd", "x", "ts"]
     assert body["learned"] == []  # untrained
     assert body["world_prior"]["ok"] is False  # no world checkout in the fixture stack
     assert body["rulebook"]["rules"][0]["id"] == "felidae-vision-gain"
@@ -127,6 +124,7 @@ def test_model_cats_vision(client: TestClient) -> None:
 def test_model_owls_hearing_has_no_profile(client: TestClient) -> None:
     body = client.get("/api/studio/strigidae/hearing/model").json()
     assert body["profiles"] == [] and body["reflex"] == [] and body["circuits"]["knobs"] == []
+    assert [g["prefix"] for g in body["circuits"]["groups"]] == ["ts"]
 
 
 def test_use_cases_template_and_step(client: TestClient) -> None:
@@ -186,3 +184,47 @@ def test_password(cfg: Settings) -> None:
     assert (
         c.get("/api/studio/species", headers={"Authorization": f"Basic {bad}"}).status_code == 401
     )
+
+
+def test_circuits_registry_and_species_values(cfg: Settings) -> None:
+    import sys
+
+    from tests.conftest import FIXTURES
+
+    c = TestClient(
+        create_app(
+            with_(cfg, circuits_cmd=f"{sys.executable} {FIXTURES.parent / 'fake_circuits.py'}")
+        )
+    )
+    body = c.get("/api/studio/felidae/vision/model").json()
+    circ = body["circuits"]
+    assert circ["installed"] and circ["ok"]
+    assert [k["name"] for k in circ["knobs"]] == [
+        "cs.sigma_center_deg",
+        "emd.delay_tau_ms",
+        "lgmd.w_inhib",
+        "ts.match_gate",
+    ]
+    cs = circ["knobs"][0]
+    assert cs["species_values"][0]["profile"] == "panther_vision"
+    assert cs["species_values"][0]["value"] == 0.7
+    assert circ["species_set"] == 1
+    assert {g["prefix"]: g["count"] for g in circ["groups"]} == {
+        "cs": 1,
+        "emd": 1,
+        "lgmd": 1,
+        "ts": 1,
+    }
+    assert_provenance(body)
+    owl = c.get("/api/studio/strigidae/hearing/model").json()["circuits"]
+    assert [k["name"] for k in owl["knobs"]] == ["ts.match_gate"]
+    assert owl["species_set"] == 0
+
+
+def test_species_totals(client: TestClient) -> None:
+    body = client.get("/api/studio/species").json()
+    t = body["totals"]
+    assert (t["clades"], t["senses"], t["modelled"], t["described"], t["empty"]) == (2, 5, 2, 2, 1)
+    assert set(body["modalities"]) == {"vision", "hearing", "touch"}
+    cat = body["cards"][0]["senses"][0]
+    assert cat["values"] == 6 and cat["sources"] >= 4

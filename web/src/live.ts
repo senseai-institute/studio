@@ -53,7 +53,7 @@ export function drawRing(ctx: CanvasRenderingContext2D, W: number, H: number, ri
 
 function drawTrace(ctx: CanvasRenderingContext2D, W: number, H: number, series: Map<string, [number, number][]>, duration: number): void {
   ctx.clearRect(0, 0, W, H);
-  ctx.strokeStyle = "rgba(154,164,184,.25)";
+  ctx.strokeStyle = "rgba(128,136,148,.35)";
   ctx.beginPath();
   ctx.moveTo(0, H - 0.5);
   ctx.lineTo(W, H - 0.5);
@@ -82,11 +82,12 @@ export interface Live {
 }
 
 export function liveView(jobId: string, view: string | null, labels: Record<string, string> = {}): Live {
-  const box = el("section", "live panel");
+  const box = el("div", "live");
   box.dataset.job = jobId;
-  const head = el("h2", undefined, "Live");
-  const status = el("span", "live-status muted", "connecting…");
-  head.append(status);
+  const head = el("div", "live-head");
+  const status = el("span", "live-status");
+  status.append(badge("connecting…", "muted"));
+  head.append(el("span", "k-label", `run ${jobId}`), status);
   const grid = el("div", "live-grid");
   const stage = el("div", "live-stage");
   const img = el("img", "frame");
@@ -104,9 +105,9 @@ export function liveView(jobId: string, view: string | null, labels: Record<stri
   trace.width = 600;
   trace.height = 120;
   trace.setAttribute("aria-label", "global surprise over time, one line per arm");
-  const legend = el("div", "legend");
+  const legend = el("div", "legend-row");
   const feed = el("ul", "feed");
-  side.append(arms, el("div", "k muted small", "global surprise"), trace, legend, el("div", "k muted small", "events"), feed);
+  side.append(arms, el("div", "k-label", "global surprise (per arm)"), trace, legend, el("div", "k-label", "reflex fires"), feed);
   grid.append(stage, side);
   box.append(head, grid);
 
@@ -163,7 +164,7 @@ export function liveView(jobId: string, view: string | null, labels: Record<stri
     const arm = typeof ev.arm === "string" ? ev.arm : null;
     switch (ev.type) {
       case "run_start": {
-        status.textContent = "running";
+        status.replaceChildren(badge("running", "warn"));
         for (const a of (ev.arms as { name: string }[]) ?? []) card(a.name);
         const seqs = (ev.sequences as { duration_s?: number }[]) ?? [];
         duration = Math.max(1, ...seqs.map((s) => s.duration_s ?? 1));
@@ -234,7 +235,7 @@ export function liveView(jobId: string, view: string | null, labels: Record<stri
   };
   es.onerror = () => {
     if (es.readyState === EventSource.CLOSED) {
-      status.textContent = "stream closed";
+      status.replaceChildren(badge("stream closed", "muted"));
       resolve();
     }
   };

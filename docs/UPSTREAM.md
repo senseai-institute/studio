@@ -15,7 +15,7 @@ against, and what each one contributes.
 | tokens, reflex | `7b12b1e`, `9442c53` | only through the SDK |
 | viewer | `8106abffd6c168386dca3dd2d5eef30796010d17` | design tokens (`web/src/theme.css`, copied), Basic auth and the SSE tail (ported into `auth.py` and `runs.tail_events`), the shape of the Run page's live view |
 | research | `63b483cd61156d353248301542afaf8297634a6b` | `docs/SPEC.md` §8/§10: `/api/research/*` behind a proxy that adds `X-SenseAI-User` |
-| circuits | `70abfcbcbad4826a054e9c8e715b98b79b1ced13` | the repo is empty. Studio calls `senseai-circuits knobs --json` when the CLI exists and shows "circuits: not installed" otherwise |
+| circuits | P1 branch `claude/new-session-fhne7e` @ `dd913aff7b692fb27ae8744b22f28eaf6d5f9308` (main is still empty) | `senseai-circuits knobs --json`: the knob registry (`name, unit, default, range, kind, source, doc`). Species values come from a spec's `circuits:` section or a prior bundle's `circuits` / `meta.circuits` (what `CircuitParams.from_bundle_meta` reads). Without the CLI: "circuits: not installed" |
 
 ## Assumed formats (until the upstream change lands)
 
@@ -39,8 +39,7 @@ Each one degrades to a "not present" badge, never to an error.
   records naming `clade` / `species` / `profile` (and optionally `sense`), with `id`, `hash`,
   `clips`, `frozen_at`, and `verdict`.
 - **Certificates**: `profiles/registry/<species>/v*.json` with `certificate`.
-- **Circuits knobs**: `senseai-circuits knobs --json` → `[{knob, species|clade|profile, sense?, value, unit, kind, rule, status}]`
-  (or `{"knobs": [...]}`).
+- **Which circuits serve which sense**: `content/circuits.yaml` maps knob prefixes (`cs`, `emd`, `lgmd`, `x`, `ts`) to library modalities. It is founder-editable until circuits declares this itself.
 
 ## Not done here
 
