@@ -4,8 +4,9 @@
 # 1. web:     build the web app with Node into src/senseai_studio/static.
 # 2. builder: resolve Python deps with uv into /opt/venv.
 # 3. app:     slim runtime; uvicorn on $PORT (default 8200).
-# Mount a profiles checkout at /senseai/profiles (SENSEAI_STACK_DIR=/senseai) and, for runs,
-# a stack with senseai-bench (SENSEAI_BENCH_CMD, SENSEAI_BENCH_PYTHON). Without bench, every
+# Mount a profiles checkout at /senseai/profiles (SENSEAI_STACK_DIR=/senseai), or set
+# SENSEAI_PROFILES_GIT (+ GITHUB_TOKEN when private) to clone it at start. For runs,
+# mount a stack with senseai-bench (SENSEAI_BENCH_CMD, SENSEAI_BENCH_PYTHON). Without bench, every
 # screen but Run works and Run says why it cannot.
 
 ARG NODE_IMAGE=node:22-slim
@@ -42,8 +43,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     STUDIO_DATA=/data
 COPY --from=builder /opt/venv /opt/venv
 COPY content /app/content
+COPY scripts/docker-entrypoint.sh /usr/local/bin/studio-entrypoint
 RUN useradd --create-home --uid 10001 studio && mkdir -p /data /senseai && chown studio /data
 USER studio
 WORKDIR /home/studio
 EXPOSE 8200
-CMD ["sh", "-c", "exec uvicorn senseai_studio.app:app_factory --factory --host 0.0.0.0 --port ${PORT:-8200} --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["studio-entrypoint"]

@@ -46,6 +46,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build image
         run: docker build -t senseai-studio .
+      - name: Refuses to start on Railway without a password
+        run: |
+          if docker run --rm -e RAILWAY_ENVIRONMENT=ci senseai-studio; then
+            echo "expected a non-zero exit"; exit 1
+          fi
       - name: Serves the fixture library behind the password
         run: |
           docker run -d --name studio -p 8200:8200 -e VIEWER_PASSWORD=pw \

@@ -87,6 +87,22 @@ use the viewer runner's names (see [`.env.example`](.env.example)):
 
 Basic auth covers everything except `/healthz` and `/api/studio/health`.
 
+## Deploy on Railway
+
+The repo root deploys as-is: `railway.json` selects the `Dockerfile` and health-checks `/healthz`.
+Set these service variables:
+
+| variable | required | meaning |
+|---|---|---|
+| `VIEWER_PASSWORD` | yes | shared password (user `senseai`). On Railway the container refuses to start without it |
+| `SENSEAI_PROFILES_GIT` | yes | `https://github.com/senseai-institute/profiles`, cloned at start (shallow) |
+| `GITHUB_TOKEN` | if profiles is private | a read-only token for that repo. It is used for the clone and removed from the checkout's git config |
+| `SENSEAI_PROFILES_REF` | no | branch or tag to deploy (default: the repo's default branch) |
+| `RESEARCH_URL` | no | shows the Research tab |
+
+Railway sets `PORT` itself. The clone is refreshed on each deploy or restart. Without a bench
+stack in the container, every screen except Run works, and Run says why it cannot.
+
 ## API
 
 OpenAPI is at `/api/studio/openapi.json` (snapshot: [`docs/openapi.json`](docs/openapi.json)).
