@@ -131,8 +131,54 @@ def test_dsec_run_draws_ring_over_frames(server: tuple[str, Settings], page: Any
     assert lit > 100  # the ring and the fire marker were drawn
 
 
-def test_research_tab_when_configured(cfg: Settings) -> None:
-    c = replace(cfg, research_url="http://127.0.0.1:9")
-    from fastapi.testclient import TestClient
+def test_research_tab_against_fake_backend(cfg: Settings) -> None:
+    from tests import fake_research
 
-    assert TestClient(create_app(c)).get("/api/studio/health").json()["research"]["configured"]
+    rport, sport = _port(), _port()
+    servers = [
+        uvicorn.Server(
+            uvicorn.Config(fake_research.app, host="127.0.0.1", port=rport, log_level="warning")
+        ),
+        uvicorn.Server(
+            uvicorn.Config(
+                create_app(replace(cfg, research_url=f"http://127.0.0.1:{rport}")),
+                host="127.0.0.1",
+                port=sport,
+                log_level="warning",
+            )
+        ),
+    ]
+    threads = [threading.Thread(target=s.run, daemon=True) for s in servers]
+    for t in threads:
+        t.start()
+    for _ in range(100):
+        if all(s.started for s in servers):
+            break
+        time.sleep(0.05)
+    try:
+        with sync_api.sync_playwright() as p:
+            kw = {"executable_path": CHROMIUM} if Path(CHROMIUM).exists() else {}
+            b = p.chromium.launch(**kw)
+            pg = b.new_page()
+            pg.goto(f"http://127.0.0.1:{sport}/studio/strigidae/hearing/research")
+            pg.fill(".chat-form textarea", "Where does the 2 degree value come from?")
+            pg.click(".chat-form button")
+            pg.wait_for_selector(".action-card")
+            text = pg.locator(".chat").inner_text()
+            assert "senseai asked about strigidae.senses.hearing" in text
+            assert "READING STRIGIDAE.SENSES.HEARING" in text.upper()
+            pg.fill(".action-card textarea", "fits the barn owl data")
+            pg.click(".action-card .btn.primary")
+            pg.wait_for_selector(".action-card >> text=approved")
+            b.close()
+        assert fake_research.APPROVALS[-1] == {
+            "id": "a1",
+            "verb": "approve",
+            "rationale": "fits the barn owl data",
+            "user": "senseai",
+        }
+    finally:
+        for s in servers:
+            s.should_exit = True
+        for t in threads:
+            t.join(5)

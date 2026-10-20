@@ -175,7 +175,8 @@ export function liveView(jobId: string, view: string | null, labels: Record<stri
       case "frame":
         if (typeof ev.path === "string") {
           img.src = api.fileUrl(jobId, ev.path);
-          noFrame.hidden = true;
+          noFrame.hidden = false;
+          noFrame.textContent = ev.kind === "rgb" ? "camera frame" : ev.kind === "surprise_grid" ? "world surprise grid (this run has no camera frame)" : String(ev.kind ?? "frame");
           box.dataset.frames = String(Number(box.dataset.frames ?? 0) + 1);
         }
         break;
