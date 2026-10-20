@@ -1,0 +1,61 @@
+# Copyright 2026 SenseAI Institute
+# SPDX-License-Identifier: Apache-2.0
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        run: |
+          uv sync --extra dev
+          cd web && npm ci
+      - name: Install Chromium for Playwright
+        run: uv run playwright install --with-deps chromium
+      - run: make lint
+      - run: make type
+      - run: make build
+      - run: make test
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t senseai-studio .
+      - name: Refuses to start on Railway without a password
+        run: |
+          if docker run --rm -e RAILWAY_ENVIRONMENT=ci senseai-studio; then
+            echo "expected a non-zero exit"; exit 1
+          fi
+      - name: Serves the fixture library behind the password
+        run: |
+          docker run -d --name studio -p 8200:8200 -e VIEWER_PASSWORD=pw \
+            -v "$PWD/tests/fixtures/profiles:/senseai/profiles:ro" senseai-studio
+          for i in $(seq 1 30); do curl -fsS localhost:8200/healthz && break; sleep 1; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8200/api/studio/species)" = 401
+          curl -fsS -u senseai:pw localhost:8200/api/studio/species | grep -q strigidae
+          curl -fsS -u senseai:pw localhost:8200/studio | grep -q "SenseAI Studio"

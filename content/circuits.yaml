@@ -1,0 +1,18 @@
+# SenseAI Studio: which senseai-circuits circuits serve which library modality, and their names.
+# Keys are knob-name prefixes in `senseai-circuits knobs --json` (circuits docs/DESIGN.md).
+# A sense's Model tab lists the knobs of the circuits whose `modalities` include its modality.
+cs:
+  name: Centre-surround receptive fields (retina)
+  modalities: [vision]
+emd:
+  name: Elementary motion detector (Hassenstein-Reichardt)
+  modalities: [vision]
+lgmd:
+  name: Looming detector (LGMD)
+  modalities: [vision]
+x:
+  name: Extrapolation surprise
+  modalities: [vision]
+ts:
+  name: Token-space prior
+  modalities: [vision, hearing, echolocation, touch]

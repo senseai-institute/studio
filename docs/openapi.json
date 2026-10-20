@@ -1,0 +1,1318 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "SenseAI Studio",
+  "description": "Species sense models: sources, model, run, pipeline, use cases. Every response carries provenance: [{field, source_file, line_or_key}].",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/api/studio/health": {
+   "get": {
+    "summary": "Health",
+    "operationId": "health_api_studio_health_get",
+    "parameters": [
+     {
+      "name": "refresh",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Refresh"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/species": {
+   "get": {
+    "summary": "Species",
+    "operationId": "species_api_studio_species_get",
+    "parameters": [
+     {
+      "name": "refresh",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Refresh"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SpeciesOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/{clade}/{sense}/sources": {
+   "get": {
+    "summary": "Sources",
+    "operationId": "sources_api_studio__clade___sense__sources_get",
+    "parameters": [
+     {
+      "name": "clade",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Clade"
+      }
+     },
+     {
+      "name": "sense",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sense"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SourcesOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/{clade}/{sense}/model": {
+   "get": {
+    "summary": "Model",
+    "operationId": "model_api_studio__clade___sense__model_get",
+    "parameters": [
+     {
+      "name": "clade",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Clade"
+      }
+     },
+     {
+      "name": "sense",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sense"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ModelOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/{clade}/{sense}/pipeline": {
+   "get": {
+    "summary": "Pipeline",
+    "operationId": "pipeline_api_studio__clade___sense__pipeline_get",
+    "parameters": [
+     {
+      "name": "clade",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Clade"
+      }
+     },
+     {
+      "name": "sense",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sense"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PipelineOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/{clade}/{sense}/use-cases": {
+   "get": {
+    "summary": "Use Cases",
+    "operationId": "use_cases_api_studio__clade___sense__use_cases_get",
+    "parameters": [
+     {
+      "name": "clade",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Clade"
+      }
+     },
+     {
+      "name": "sense",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sense"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UseCasesOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/{clade}/{sense}/run/options": {
+   "get": {
+    "summary": "Run Options",
+    "operationId": "run_options_api_studio__clade___sense__run_options_get",
+    "parameters": [
+     {
+      "name": "clade",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Clade"
+      }
+     },
+     {
+      "name": "sense",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sense"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RunOptionsOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/{clade}/{sense}/run": {
+   "post": {
+    "summary": "Run",
+    "operationId": "run_api_studio__clade___sense__run_post",
+    "parameters": [
+     {
+      "name": "clade",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Clade"
+      }
+     },
+     {
+      "name": "sense",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sense"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RunBody"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/jobs": {
+   "get": {
+    "summary": "Job List",
+    "operationId": "job_list_api_studio_jobs_get",
+    "parameters": [
+     {
+      "name": "clade",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Clade"
+      }
+     },
+     {
+      "name": "sense",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Sense"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 20,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/JobOut"
+         },
+         "title": "Response Job List Api Studio Jobs Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/jobs/{job_id}": {
+   "get": {
+    "summary": "Job",
+    "operationId": "job_api_studio_jobs__job_id__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/jobs/{job_id}/cancel": {
+   "post": {
+    "summary": "Cancel",
+    "operationId": "cancel_api_studio_jobs__job_id__cancel_post",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/jobs/{job_id}/events": {
+   "get": {
+    "summary": "Events",
+    "description": "The live events contract (bench ``--events``) as Server-Sent Events.",
+    "operationId": "events_api_studio_jobs__job_id__events_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/jobs/{job_id}/report": {
+   "get": {
+    "summary": "Report",
+    "operationId": "report_api_studio_jobs__job_id__report_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/jobs/{job_id}/files/{path}": {
+   "get": {
+    "summary": "Job File",
+    "description": "An image a run wrote into its folder (frames for the live view).",
+    "operationId": "job_file_api_studio_jobs__job_id__files__path__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "path",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Path"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "Card": {
+    "properties": {
+     "clade": {
+      "type": "string",
+      "title": "Clade"
+     },
+     "latin": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latin"
+     },
+     "names": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Names"
+     },
+     "niche": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Niche"
+     },
+     "senses": {
+      "items": {
+       "$ref": "#/components/schemas/SenseChip"
+      },
+      "type": "array",
+      "title": "Senses"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "clade",
+     "latin",
+     "names",
+     "niche",
+     "senses"
+    ],
+    "title": "Card",
+    "description": "A clade on Home."
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "HealthOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "ok": {
+      "type": "boolean",
+      "title": "Ok"
+     },
+     "repos": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Repos"
+     },
+     "engine": {
+      "type": "string",
+      "title": "Engine"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "ok",
+     "repos",
+     "engine"
+    ],
+    "title": "HealthOut",
+    "description": "``GET /api/studio/health``."
+   },
+   "JobOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "status"
+    ],
+    "title": "JobOut",
+    "description": "A run job."
+   },
+   "ModelOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "clade": {
+      "type": "string",
+      "title": "Clade"
+     },
+     "sense": {
+      "type": "string",
+      "title": "Sense"
+     },
+     "engine": {
+      "type": "string",
+      "title": "Engine"
+     },
+     "circuits": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Circuits"
+     },
+     "profiles": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Profiles"
+     },
+     "world_prior": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "World Prior"
+     },
+     "learned": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Learned"
+     },
+     "reflex": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Reflex"
+     },
+     "rulebook": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Rulebook"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "clade",
+     "sense",
+     "engine",
+     "circuits",
+     "profiles",
+     "world_prior",
+     "learned",
+     "reflex",
+     "rulebook"
+    ],
+    "title": "ModelOut",
+    "description": "``GET /api/studio/{clade}/{sense}/model``."
+   },
+   "Open": {
+    "properties": {},
+    "additionalProperties": true,
+    "type": "object",
+    "title": "Open",
+    "description": "A record that may carry more keys than listed."
+   },
+   "PipelineOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "clade": {
+      "type": "string",
+      "title": "Clade"
+     },
+     "sense": {
+      "type": "string",
+      "title": "Sense"
+     },
+     "steps": {
+      "items": {
+       "$ref": "#/components/schemas/Step"
+      },
+      "type": "array",
+      "title": "Steps"
+     },
+     "at": {
+      "type": "integer",
+      "title": "At"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "clock": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Clock"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "clade",
+     "sense",
+     "steps",
+     "at",
+     "total",
+     "clock"
+    ],
+    "title": "PipelineOut",
+    "description": "``GET /api/studio/{clade}/{sense}/pipeline``."
+   },
+   "Provenance": {
+    "properties": {
+     "field": {
+      "type": "string",
+      "title": "Field",
+      "description": "slash path into this response, e.g. quantities/0/value"
+     },
+     "source_file": {
+      "type": "string",
+      "title": "Source File",
+      "description": "<repo>/<path>, e.g. profiles/library/<clade>.yaml"
+     },
+     "line_or_key": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Line Or Key",
+      "description": "1-based line, or a key for non-text sources"
+     }
+    },
+    "type": "object",
+    "required": [
+     "field",
+     "source_file",
+     "line_or_key"
+    ],
+    "title": "Provenance",
+    "description": "Where one item of a response came from."
+   },
+   "RunBody": {
+    "properties": {
+     "source": {
+      "type": "string",
+      "title": "Source",
+      "description": "a source id from run/options, e.g. synthetic or dsec:<name>"
+     },
+     "arms": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "minItems": 1,
+      "title": "Arms",
+      "description": "arm ids from run/options"
+     },
+     "seconds": {
+      "type": "number",
+      "maximum": 600.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Seconds",
+      "default": 10.0
+     }
+    },
+    "type": "object",
+    "required": [
+     "source",
+     "arms"
+    ],
+    "title": "RunBody",
+    "description": "Body of ``POST /api/studio/{clade}/{sense}/run``."
+   },
+   "RunOptionsOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "sources": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Sources"
+     },
+     "arms": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Arms"
+     },
+     "bench": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Bench"
+     },
+     "prereg": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Prereg"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "sources",
+     "arms",
+     "bench",
+     "prereg"
+    ],
+    "title": "RunOptionsOut",
+    "description": "``GET /api/studio/{clade}/{sense}/run/options``."
+   },
+   "SenseChip": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "modality": {
+      "type": "string",
+      "title": "Modality"
+     },
+     "state": {
+      "type": "string",
+      "title": "State",
+      "description": "modelled | described | empty"
+     },
+     "data": {
+      "type": "string",
+      "title": "Data",
+      "description": "available | synthetic | none"
+     },
+     "step": {
+      "type": "integer",
+      "title": "Step"
+     },
+     "steps": {
+      "type": "integer",
+      "title": "Steps"
+     },
+     "profiles": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Profiles"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "modality",
+     "state",
+     "data",
+     "step",
+     "steps",
+     "profiles"
+    ],
+    "title": "SenseChip",
+    "description": "A sense on a Home card."
+   },
+   "SourcesOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "clade": {
+      "type": "string",
+      "title": "Clade"
+     },
+     "sense": {
+      "type": "string",
+      "title": "Sense"
+     },
+     "sense_info": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Sense Info"
+     },
+     "quantities": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Quantities"
+     },
+     "table": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Table"
+     },
+     "open_questions": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Open Questions"
+     },
+     "requests": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Requests"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "clade",
+     "sense",
+     "sense_info",
+     "quantities",
+     "table",
+     "open_questions",
+     "requests"
+    ],
+    "title": "SourcesOut",
+    "description": "``GET /api/studio/{clade}/{sense}/sources``."
+   },
+   "SpeciesOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "cards": {
+      "items": {
+       "$ref": "#/components/schemas/Card"
+      },
+      "type": "array",
+      "title": "Cards"
+     },
+     "engine": {
+      "type": "string",
+      "title": "Engine"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "cards",
+     "engine"
+    ],
+    "title": "SpeciesOut",
+    "description": "``GET /api/studio/species``."
+   },
+   "Step": {
+    "properties": {
+     "n": {
+      "type": "integer",
+      "title": "N"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "done": {
+      "type": "boolean",
+      "title": "Done"
+     },
+     "at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "At"
+     },
+     "detail": {
+      "type": "string",
+      "title": "Detail"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "n",
+     "name",
+     "done",
+     "at",
+     "detail"
+    ],
+    "title": "Step",
+    "description": "One pipeline step."
+   },
+   "UseCasesOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "clade": {
+      "type": "string",
+      "title": "Clade"
+     },
+     "sense": {
+      "type": "string",
+      "title": "Sense"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "step": {
+      "type": "integer",
+      "title": "Step"
+     },
+     "steps": {
+      "type": "integer",
+      "title": "Steps"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "clade",
+     "sense",
+     "items",
+     "step",
+     "steps"
+    ],
+    "title": "UseCasesOut",
+    "description": "``GET /api/studio/{clade}/{sense}/use-cases``."
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  }
+ }
+}
