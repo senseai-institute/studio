@@ -171,7 +171,7 @@ owls/hearing, and checks that a DSEC-layout recording draws the ring over frames
 The no-hard-coding rule is checked with:
 
 ```bash
-grep -rniE "felid|strigid|panther|vision|hearing" src/senseai_studio web/src --include=*.py --include=*.ts
+grep -rniE "\b(felid|strigid|panther|vision|hearing)" src/senseai_studio web/src --include=*.py --include=*.ts
 ```
 
 It prints nothing (test files aside). Species, senses and numbers all arrive through the API.

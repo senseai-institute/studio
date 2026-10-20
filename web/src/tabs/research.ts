@@ -8,7 +8,7 @@
 //
 //   chat (left)          context (right): To check · Claim · Impact · Experiment · Settings
 
-import { badge, el, empty, errorBox, link } from "../dom.ts";
+import { badge, el, empty, errorBox, link, section } from "../dom.ts";
 import { type ActionCard, arrow, type ChatEvent, chatEvent, focusPath, panelFor, startFor, transcriptEvents } from "../research/adapt.ts";
 import { type ClaimCard, type ExperimentView, type Impact, research, type SettingsPage } from "../research/client.ts";
 
@@ -26,9 +26,10 @@ export function researchTab(body: HTMLElement, clade: string, sense: string): vo
   const grid = el("div", "research-grid");
 
   // ------------------------------------------------------------- chat
-  const chat = el("section", "panel research-chat");
-  const head = el("h2", undefined, "Research");
-  head.append(badge(`focus: ${focus}`, "teal"), badge("answers come from the research service", "muted"));
+  const chatSec = section("", "Research");
+  chatSec.tools.append(badge(`focus: ${focus}`, "teal"), badge("answers come from the research service, not Studio", "muted"));
+  const chat = chatSec.box;
+  chat.classList.add("research", "research-chat");
   const log = el("div", "chat");
   log.setAttribute("aria-live", "polite");
   const form = el("form", "chat-form");
@@ -39,10 +40,12 @@ export function researchTab(body: HTMLElement, clade: string, sense: string): vo
   const send = el("button", "btn primary", "Send");
   send.type = "submit";
   form.append(input, send);
-  chat.append(head, log, form);
+  chatSec.body.append(log, form);
 
   // ------------------------------------------------------------- context
-  const ctx = el("section", "panel research-context");
+  const ctxSec = section("", "Context");
+  const ctx = ctxSec.box;
+  ctx.classList.add("research-context");
   const tabs = el("div", "subtabs");
   tabs.setAttribute("role", "tablist");
   const panes = {} as Record<Pane, HTMLElement>;
@@ -63,7 +66,7 @@ export function researchTab(body: HTMLElement, clade: string, sense: string): vo
   panes.claim.append(empty("Pick a value under To check, or ask about one."));
   panes.impact.append(empty("When the assistant works out what a change does, it shows here."));
   panes.experiment.append(empty("Bench results show here, with the chance hit rate beside every hit rate."));
-  ctx.append(tabs, ...Object.values(panes));
+  ctxSec.body.append(tabs, ...Object.values(panes));
   grid.append(chat, ctx);
   body.replaceChildren(grid);
 
@@ -242,7 +245,7 @@ export function researchTab(body: HTMLElement, clade: string, sense: string): vo
         }
       });
     }
-    const actions = el("div", "card-actions");
+    const actions = el("div", "row");
     actions.append(ok, no);
     box.append(why, actions, out);
     return box;

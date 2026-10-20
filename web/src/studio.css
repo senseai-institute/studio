@@ -410,6 +410,7 @@ blockquote.passage mark { background: var(--mark); color: var(--ink); padding: 0
 .start-row .value { margin-left: auto; color: var(--ink-2); font-family: var(--mono); font-size: 13px; }
 .question { display: flex; gap: 8px; align-items: baseline; font: 14.5px/1.5 var(--serif); }
 .claim-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.claim-view, .impact-view { overflow-wrap: anywhere; }
 .claim-value { font: 500 24px/1.2 var(--mono); color: var(--accent); margin: 6px 0 10px; }
 ol.history { padding-left: 18px; font-size: 14px; }
 td.too-few { color: var(--proposed); }
