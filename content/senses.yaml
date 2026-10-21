@@ -1,0 +1,49 @@
+# SenseAI Studio: how Explore searches the literature for each sense.
+#
+# Keys are the library schema's modalities (library/schema/clade.schema.json,
+# $defs.sense.modality). For a species, Explore counts the papers whose title or abstract
+# names the species and at least one of a sense's terms (OpenAlex), and ranks the senses by
+# that count. Edit the terms to widen or narrow a sense; the query each count came from is
+# shown beside it.
+#
+#   label  what the page calls the sense
+#   terms  words or "quoted phrases"; a paper must mention one of them
+vision:
+  label: Vision
+  terms: [vision, visual, retina, retinal, photoreceptor, "eye"]
+hearing:
+  label: Hearing
+  terms: [hearing, auditory, cochlea, audiogram, "acoustic"]
+olfaction:
+  label: Smell
+  terms: [olfaction, olfactory, odor, odour, "vomeronasal"]
+gustation:
+  label: Taste
+  terms: [gustation, gustatory, "taste"]
+touch:
+  label: Touch
+  terms: [tactile, touch, mechanoreceptor, vibrissae, whisker]
+vibration:
+  label: Vibration
+  terms: [vibration, "substrate-borne", seismic]
+echolocation:
+  label: Echolocation
+  terms: [echolocation, biosonar, sonar]
+electroreception:
+  label: Electroreception
+  terms: [electroreception, electroreceptor, "electric field", electrosensory]
+magnetoreception:
+  label: Magnetoreception
+  terms: [magnetoreception, magnetoreceptor, "magnetic compass", geomagnetic]
+thermoreception:
+  label: Heat sensing
+  terms: [thermoreception, thermoreceptor, "infrared", "pit organ"]
+proprioception:
+  label: Proprioception
+  terms: [proprioception, proprioceptive, "muscle spindle"]
+equilibrium:
+  label: Balance
+  terms: [vestibular, equilibrium, "semicircular canal", balance]
+polarisation:
+  label: Polarised light
+  terms: ["polarized light", "polarised light", polarization, polarisation]

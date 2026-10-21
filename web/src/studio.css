@@ -422,3 +422,52 @@ td.too-few { color: var(--proposed); }
 .check-result { display: block; margin-top: 4px; }
 .check-result[data-ok="true"] { color: var(--ok); }
 .check-result[data-ok="false"] { color: var(--alert); }
+
+/* ---------------------------------------------------------------- explore: any species */
+.explore, .taxa { display: grid; gap: 18px; }
+.explore-head { display: grid; gap: 8px; }
+.explore-hero { display: grid; gap: 6px; padding: 16px 18px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); }
+.explore-hero h2 { margin: 0; font-size: 18px; }
+.explore-hero p { margin: 0 0 4px; }
+.explore-search { display: flex; gap: 8px; max-width: 640px; }
+.explore-search input { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--rule-strong); border-radius: 6px; padding: 9px 12px; font-size: 15.5px; }
+.explore-search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.taxa { gap: 8px; }
+.taxon { display: grid; gap: 3px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); color: var(--ink); text-decoration: none; }
+.taxon:hover { border-color: var(--accent); background: var(--accent-soft); }
+.taxon-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; font-size: 16px; }
+.latin { font-family: var(--serif); font-style: italic; color: var(--ink-2); }
+.page-title .latin { font-style: italic; }
+.sense-rows { display: grid; gap: 4px; }
+.sense-row { display: grid; grid-template-columns: minmax(150px, 210px) minmax(80px, 1fr) 70px auto; grid-template-areas: "label bar count src" "top top top top"; column-gap: 12px; row-gap: 2px; align-items: center; padding: 9px 12px; border-radius: 6px; border: 1px solid transparent; color: var(--ink); text-decoration: none; }
+.sense-row:hover { background: var(--accent-soft); border-color: var(--rule); }
+.sense-row .label { grid-area: label; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.sense-row .bar { grid-area: bar; height: 8px; background: var(--surface-3); border-radius: 4px; overflow: hidden; }
+.sense-row .bar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.sense-row .count { grid-area: count; text-align: right; font-size: 14px; }
+.sense-row .top { grid-area: top; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sense-row .src { grid-area: src; }
+.no-papers summary { cursor: pointer; color: var(--ink-3); font-size: 13.5px; padding: 6px 0; }
+.years-fig { margin: 0; display: grid; gap: 4px; }
+.years { display: flex; align-items: flex-end; gap: 2px; height: 64px; padding: 4px 0; border-bottom: 1px solid var(--rule); }
+.years i { flex: 1; min-width: 2px; max-width: 14px; background: var(--accent); opacity: .75; border-radius: 2px 2px 0 0; }
+.years i:hover { opacity: 1; }
+.papers { margin: 0; padding-left: 28px; display: grid; gap: 14px; }
+.paper::marker { color: var(--ink-3); font: 13px var(--mono); }
+.paper-title { font-family: var(--serif); font-size: 16px; line-height: 1.4; }
+.paper-title a { color: var(--ink); text-decoration: none; }
+.paper-title a:hover { color: var(--link); text-decoration: underline; }
+.paper-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; color: var(--ink-2); margin-top: 2px; }
+.paper-links { display: flex; gap: 14px; margin-top: 2px; }
+.paper-abstract summary { cursor: pointer; color: var(--ink-3); font-size: 13px; }
+.paper-abstract p { font-family: var(--serif); font-size: 14.5px; line-height: 1.55; color: var(--ink-2); margin: 6px 0 0; max-width: 80ch; }
+.seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 6px; overflow: hidden; }
+.seg a { padding: 3px 10px; font-size: 13px; text-decoration: none; color: var(--ink-2); }
+.seg a + a { border-left: 1px solid var(--rule-strong); }
+.seg a[aria-current="true"] { background: var(--accent); color: var(--accent-ink); }
+.pager { display: flex; gap: 16px; align-items: center; justify-content: center; padding-top: 6px; }
+.explore-assistant .btn { justify-self: start; }
+@media (max-width: 720px) {
+  .sense-row { grid-template-columns: 1fr 64px; grid-template-areas: "label count" "bar bar" "top top"; }
+  .sense-row .src { display: none; }
+}

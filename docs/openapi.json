@@ -656,6 +656,155 @@
      }
     }
    }
+  },
+  "/api/studio/explore/species": {
+   "get": {
+    "summary": "Explore Species",
+    "description": "Taxa matching a common or scientific name, whether or not the library has them.",
+    "operationId": "explore_species_api_studio_explore_species_get",
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Q"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ExploreSpeciesOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/explore/taxon/{key}": {
+   "get": {
+    "summary": "Explore Taxon",
+    "description": "The taxon's senses, ranked by how many papers cover each.",
+    "operationId": "explore_taxon_api_studio_explore_taxon__key__get",
+    "parameters": [
+     {
+      "name": "key",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Key"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ExploreTaxonOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/explore/taxon/{key}/{sense}/papers": {
+   "get": {
+    "summary": "Explore Papers",
+    "description": "Papers on one sense of the taxon (sort: cited | recent), 25 a page.",
+    "operationId": "explore_papers_api_studio_explore_taxon__key___sense__papers_get",
+    "parameters": [
+     {
+      "name": "key",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Key"
+      }
+     },
+     {
+      "name": "sense",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sense"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "cited",
+       "title": "Sort"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Page"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ExplorePapersOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -714,6 +863,138 @@
     ],
     "title": "Card",
     "description": "A clade on Home."
+   },
+   "ExplorePapersOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "taxon": {
+      "$ref": "#/components/schemas/Taxon"
+     },
+     "sense": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Sense"
+     },
+     "filter": {
+      "type": "string",
+      "title": "Filter",
+      "description": "the OpenAlex filter the papers came from"
+     },
+     "sort": {
+      "type": "string",
+      "title": "Sort"
+     },
+     "page": {
+      "type": "integer",
+      "title": "Page"
+     },
+     "per_page": {
+      "type": "integer",
+      "title": "Per Page"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "papers": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Papers"
+     },
+     "years": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Years"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "taxon",
+     "sense",
+     "filter",
+     "sort",
+     "page",
+     "per_page",
+     "total",
+     "papers",
+     "years"
+    ],
+    "title": "ExplorePapersOut",
+    "description": "``GET /api/studio/explore/taxon/{key}/{sense}/papers``."
+   },
+   "ExploreSpeciesOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "query": {
+      "type": "string",
+      "title": "Query"
+     },
+     "taxa": {
+      "items": {
+       "$ref": "#/components/schemas/Taxon"
+      },
+      "type": "array",
+      "title": "Taxa"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "query",
+     "taxa"
+    ],
+    "title": "ExploreSpeciesOut",
+    "description": "``GET /api/studio/explore/species``."
+   },
+   "ExploreTaxonOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "taxon": {
+      "$ref": "#/components/schemas/Taxon"
+     },
+     "senses": {
+      "items": {
+       "$ref": "#/components/schemas/Open"
+      },
+      "type": "array",
+      "title": "Senses",
+      "description": "{id, label, terms, filter, count, top, library}"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "taxon",
+     "senses"
+    ],
+    "title": "ExploreTaxonOut",
+    "description": "``GET /api/studio/explore/taxon/{key}``."
    },
    "HTTPValidationError": {
     "properties": {
@@ -1226,6 +1507,66 @@
     ],
     "title": "Step",
     "description": "One pipeline step."
+   },
+   "Taxon": {
+    "properties": {
+     "key": {
+      "type": "integer",
+      "title": "Key"
+     },
+     "scientific_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Scientific Name"
+     },
+     "rank": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rank"
+     },
+     "common_names": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Common Names"
+     },
+     "library": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Library"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "key",
+     "scientific_name",
+     "rank",
+     "common_names",
+     "library"
+    ],
+    "title": "Taxon",
+    "description": "A taxon from GBIF's backbone, with the library entry covering it, if any."
    },
    "UseCasesOut": {
     "properties": {

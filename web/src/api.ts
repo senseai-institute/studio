@@ -219,6 +219,71 @@ export interface Health extends WithProv {
   bench: { found: boolean; error: string | null; features: Record<string, boolean> };
 }
 
+export interface LibraryLink {
+  clade: string;
+  name: string;
+  senses: Record<string, { id: string; state: Chip["state"] }>;
+}
+
+export interface Taxon {
+  key: number;
+  scientific_name: string | null;
+  authorship: string | null;
+  rank: string | null;
+  common_names: string[];
+  classification: Record<string, string | null>;
+  gbif: string;
+  library: LibraryLink | null;
+  query?: string;
+}
+
+export interface ExploreSpecies extends WithProv {
+  query: string;
+  taxa: Taxon[];
+}
+
+export interface SenseHits {
+  id: string;
+  label: string;
+  terms: string[];
+  filter: string;
+  count: number | null;
+  top: { title: string | null; year: number | null; id: string }[];
+  error: string | null;
+  library: { id: string; state: Chip["state"] } | null;
+}
+
+export interface ExploreTaxon extends WithProv {
+  taxon: Taxon;
+  senses: SenseHits[];
+}
+
+export interface Paper {
+  id: string;
+  doi: string | null;
+  title: string | null;
+  year: number | null;
+  type: string | null;
+  venue: string | null;
+  authors: string[];
+  more_authors: number;
+  cited_by: number;
+  open_access: string | null;
+  abstract: string | null;
+}
+
+export interface ExplorePapers extends WithProv {
+  taxon: Taxon;
+  sense: { id: string; label: string; terms: string[]; library: { id: string; state: Chip["state"] } | null };
+  filter: string;
+  sort: "cited" | "recent";
+  page: number;
+  per_page: number;
+  total: number;
+  papers: Paper[];
+  years: { year: number; count: number }[];
+}
+
 async function get<T>(url: string): Promise<T> {
   const r = await fetch(url, { headers: { Accept: "application/json" } });
   if (!r.ok) throw new Error(await errorText(r));
@@ -240,6 +305,10 @@ const base = (clade: string, sense: string) => `/api/studio/${encodeURIComponent
 export const api = {
   species: () => get<Species>("/api/studio/species"),
   health: () => get<Health>("/api/studio/health"),
+  exploreSpecies: (q: string) => get<ExploreSpecies>(`/api/studio/explore/species?q=${encodeURIComponent(q)}`),
+  exploreTaxon: (key: number) => get<ExploreTaxon>(`/api/studio/explore/taxon/${key}`),
+  explorePapers: (key: number, sense: string, sort: string, page: number) =>
+    get<ExplorePapers>(`/api/studio/explore/taxon/${key}/${encodeURIComponent(sense)}/papers?sort=${encodeURIComponent(sort)}&page=${page}`),
   sources: (c: string, s: string) => get<Sources>(`${base(c, s)}/sources`),
   model: (c: string, s: string) => get<Model>(`${base(c, s)}/model`),
   pipeline: (c: string, s: string) => get<Pipeline>(`${base(c, s)}/pipeline`),

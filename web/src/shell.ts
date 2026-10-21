@@ -81,7 +81,7 @@ function searchBox(): HTMLElement {
   const wrap = el("div", "search");
   const input = el("input");
   input.type = "search";
-  input.placeholder = "Species or sense";
+  input.placeholder = "Any species or sense";
   input.setAttribute("aria-label", "Search species and senses");
   input.id = "search";
   const kbd = el("kbd", "hide-narrow", "/");
@@ -117,7 +117,9 @@ function searchBox(): HTMLElement {
   input.addEventListener("input", async () => {
     const q = input.value.trim().toLowerCase();
     const items = await all;
-    hits = q ? items.filter((h) => q.split(/\s+/).every((w) => h.hay.includes(w))).slice(0, 12) : [];
+    hits = q ? items.filter((h) => q.split(/\s+/).every((w) => h.hay.includes(w))).slice(0, 11) : [];
+    const raw = input.value.trim();
+    if (raw.length >= 2) hits.push({ label: `Search every species for “${raw}”`, sub: "GBIF · papers", href: `/studio/explore?q=${encodeURIComponent(raw)}`, hay: "" });
     sel = 0;
     render();
   });

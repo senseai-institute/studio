@@ -9,6 +9,7 @@ import type { Card, Chip, Species } from "../api.ts";
 import { badge, el, errorBox, from, inspect, section, table } from "../dom.ts";
 import { step } from "../format.ts";
 import { shell, species } from "../shell.ts";
+import { speciesSearch } from "./explore.ts";
 
 function stat(v: number | string, k: string, dot?: string): HTMLElement {
   const s = el("div", "stat");
@@ -75,7 +76,9 @@ export async function homePage(root: HTMLElement): Promise<void> {
     stat(t.references, "references"),
     stat(t.open_questions, "open questions"),
   );
-  page.append(intro, stats);
+  const find = el("div", "explore-hero");
+  find.append(el("h2", undefined, "Look up any species"), el("p", "faint small", "Any animal, whether or not the library has it: see which of its senses have been studied, and read the papers."), speciesSearch());
+  page.append(intro, find, stats);
   if (res.engine !== "senseai-profiles") page.append(el("p", "note warn", `Profile specs were read as plain YAML (${res.engine}): the checkout's senseai-profiles code did not run, so rule values are not computed.`));
 
   const mods = res.modalities;
