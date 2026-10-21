@@ -55,6 +55,10 @@ class RateLimited(ExploreError):
     """The service answered 429 after the retries."""
 
 
+class BadQuery(Exception):
+    """The search text has nothing to search for."""
+
+
 class NotFound(Exception):
     """No such taxon or sense."""
 
@@ -88,6 +92,16 @@ def english_names(rows: list[dict[str, Any]]) -> list[str]:
         if n and n.lower() not in {x.lower() for x in out}:
             out.append(n)
     return out
+
+
+def custom_terms(q: str) -> list[str]:
+    """``"colour vision, cone"`` -> ``["colour vision", "cone"]``: at most 10, 80 chars each."""
+    out: list[str] = []
+    for part in q.split(","):
+        t = " ".join(part.replace('"', " ").split())[:80]
+        if t and t.lower() not in {x.lower() for x in out}:
+            out.append(t)
+    return out[:10]
 
 
 def _int(v: Any) -> int | None:
@@ -496,8 +510,32 @@ class Explore:
     ) -> dict[str, Any]:
         """The papers on one sense of the taxon, a page at a time, and how many per year."""
         s, line = self._sense(sense)
-        t = await self._taxon_full(key)
         terms = [str(x) for x in s.get("terms") or [sense]]
+        info = {"id": sense, "label": s.get("label") or sense, "terms": terms}
+        return await self._papers(key, info, (self.senses().label, line), sort, page)
+
+    async def search_papers(
+        self, key: int, q: str, sort: str = "cited", page: int = 1
+    ) -> dict[str, Any]:
+        """Papers on any sense or trait typed in: comma-separated terms, any one of which."""
+        terms = custom_terms(q)
+        if not terms:
+            raise BadQuery(
+                "type a sense or trait, e.g. colour vision, or several separated by commas"
+            )
+        info = {"id": None, "label": q.strip(), "terms": terms}
+        return await self._papers(key, info, ("query:q", q.strip()), sort, page)
+
+    async def _papers(
+        self,
+        key: int,
+        info: dict[str, Any],
+        where: tuple[str, int | str | None],
+        sort: str,
+        page: int,
+    ) -> dict[str, Any]:
+        t = await self._taxon_full(key)
+        terms = info["terms"]
         sort = sort if sort in SORTS else "cited"
         page = max(page, 1)
         got: dict[str, Any] | None = None
@@ -508,17 +546,12 @@ class Explore:
             got = await self._papers_epmc(t, terms, sort, page)
         p = Prov()
         p.add("taxon", "gbif:species", key)
-        p.add("sense/terms", self.senses().label, line)
+        p.add("sense/terms", *where)
         p.add("papers", f"{got['source']}:works", got["filter"])
         lib = t["library"]
         return got | {
             "taxon": t,
-            "sense": {
-                "id": sense,
-                "label": s.get("label") or sense,
-                "terms": terms,
-                "library": (lib or {}).get("senses", {}).get(sense),
-            },
+            "sense": info | {"library": (lib or {}).get("senses", {}).get(info["id"] or "")},
             "sort": sort,
             "page": page,
             "per_page": PER_PAGE,

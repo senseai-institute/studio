@@ -471,3 +471,4 @@ td.too-few { color: var(--proposed); }
   .sense-row { grid-template-columns: 1fr 64px; grid-template-areas: "label count" "bar bar" "top top"; }
   .sense-row .src { display: none; }
 }
+.sense-search { max-width: 720px; }
