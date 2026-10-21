@@ -141,3 +141,41 @@ class HealthOut(Envelope):
     ok: bool
     repos: dict[str, Any]
     engine: str
+
+
+class Taxon(Open):
+    """A taxon from GBIF's backbone, with the library entry covering it, if any."""
+
+    key: int
+    scientific_name: str | None
+    rank: str | None
+    common_names: list[str]
+    library: dict[str, Any] | None
+
+
+class ExploreSpeciesOut(Envelope):
+    """``GET /api/studio/explore/species``."""
+
+    query: str
+    taxa: list[Taxon]
+
+
+class ExploreTaxonOut(Envelope):
+    """``GET /api/studio/explore/taxon/{key}``."""
+
+    taxon: Taxon
+    senses: list[Open] = Field(description="{id, label, terms, filter, count, top, library}")
+
+
+class ExplorePapersOut(Envelope):
+    """``GET /api/studio/explore/taxon/{key}/{sense}/papers``."""
+
+    taxon: Taxon
+    sense: dict[str, Any]
+    filter: str = Field(description="the OpenAlex filter the papers came from")
+    sort: str
+    page: int
+    per_page: int
+    total: int
+    papers: list[Open]
+    years: list[Open]

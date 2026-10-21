@@ -1,6 +1,6 @@
 # Copyright 2026 SenseAI Institute
 # SPDX-License-Identifier: Apache-2.0
-"""Founder-owned content under ``STUDIO_CONTENT``: modalities, pipeline steps, use cases.
+"""Founder-owned content under ``STUDIO_CONTENT``: modalities, senses, pipeline steps, use cases.
 
 Studio writes nothing but use-case *templates* (``senseai-studio check --write-templates``),
 and only into ``STUDIO_CONTENT``; it never writes into an upstream checkout.
@@ -41,6 +41,14 @@ def circuits(content: Path) -> Located:
     if not p.is_file():
         return Located({}, {}, "studio/content/circuits.yaml")
     return load_located(p, "studio/content/circuits.yaml")
+
+
+def senses(content: Path) -> Located:
+    """``senses.yaml``: library modality -> label and the terms Explore searches papers for."""
+    p = content / "senses.yaml"
+    if not p.is_file():
+        return Located({}, {}, "studio/content/senses.yaml")
+    return load_located(p, "studio/content/senses.yaml")
 
 
 def pipeline_steps(content: Path, profiles: Path) -> Located:

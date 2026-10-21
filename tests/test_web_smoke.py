@@ -224,3 +224,61 @@ def test_research_tab_end_to_end(cfg: Settings, research_server: str, page: Any)
     finally:
         srv.should_exit = True
         t.join(5)
+
+
+def test_explore_any_species(cfg: Settings, research_server: str, page: Any) -> None:
+    """Home → search "panther" → the leopard → its senses by papers → vision's papers, with
+    the research assistant's summary (fake GBIF/OpenAlex and a fake research service)."""
+    import httpx
+
+    from tests import fake_outside
+    from tests.fake_research import TOKEN
+
+    c = replace(cfg, research_url=research_server, research_token=TOKEN)
+    app = create_app(c, explore_transport=httpx.MockTransport(fake_outside.handler))
+    port = _port()
+    srv = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+    t = threading.Thread(target=srv.run, daemon=True)
+    t.start()
+    for _ in range(100):
+        if srv.started:
+            break
+        time.sleep(0.05)
+    try:
+        pg = page
+        pg.goto(f"http://127.0.0.1:{port}/studio")
+        pg.fill(".explore-hero input[name=q]", "panther")
+        pg.press(".explore-hero input[name=q]", "Enter")
+        pg.wait_for_selector(".taxon")
+        assert "/studio/explore?q=panther" in pg.url
+        first = pg.locator(".taxon").first
+        assert "Panthera pardus" in first.inner_text() and "in the library" in first.inner_text()
+        if shots := os.environ.get("STUDIO_SCREENSHOTS"):
+            pg.screenshot(path=f"{shots}/explore-search.png", full_page=True)
+        first.click()
+        pg.wait_for_selector(".sense-row")
+        rows = pg.locator(".sense-rows > .sense-row")
+        assert [rows.nth(i).get_attribute("data-sense") for i in range(3)] == [
+            "vision",
+            "hearing",
+            "olfaction",
+        ]
+        assert "412" in rows.first.inner_text() and "modelled" in rows.first.inner_text()
+        assert pg.locator(".no-papers summary").count() == 1
+        if shots:
+            pg.screenshot(path=f"{shots}/explore-senses.png", full_page=True)
+        rows.first.click()
+        pg.wait_for_selector(".paper")
+        assert pg.locator(".paper").count() == 25
+        assert "412 papers" in pg.locator(".section").last.inner_text()
+        assert "Open the workspace" in pg.locator(".note").first.inner_text()
+        pg.click(".explore-assistant button")
+        pg.wait_for_selector(".explore-assistant .msg.assistant")
+        pg.wait_for_function("() => !document.querySelector('.explore-assistant button').disabled")
+        if shots:
+            pg.screenshot(path=f"{shots}/explore-papers.png", full_page=True)
+        pg.click(".seg a:has-text('Newest')")
+        pg.wait_for_selector(".seg a[aria-current='true']:has-text('Newest')")
+    finally:
+        srv.should_exit = True
+        t.join(5)

@@ -17,6 +17,9 @@
     GET  /api/studio/jobs/{id}/report                replay_report.md
     GET  /api/studio/jobs/{id}/files/{path}          a frame image the run wrote
     GET  /api/studio/health                          repos, SHAs, tools, data root
+    GET  /api/studio/explore/species?q=              any taxon by name (GBIF)
+    GET  /api/studio/explore/taxon/{key}             its senses, ranked by papers (OpenAlex)
+    GET  /api/studio/explore/taxon/{key}/{sense}/papers  the papers on one sense
     *    /api/studio/research/*                      proxy to RESEARCH_URL (when set)
 
 Every JSON response carries ``provenance``. Studio reads repos read-only.
@@ -38,7 +41,7 @@ from fastapi.responses import (
 )
 from pydantic import BaseModel, Field
 
-from senseai_studio import __version__, models, runs, studio
+from senseai_studio import __version__, explore, models, runs, studio
 from senseai_studio.auth import BasicAuth
 from senseai_studio.facts import upstream
 from senseai_studio.research import add_research_routes
@@ -173,6 +176,33 @@ def create_app(cfg: Settings | None = None, **kw: Any) -> Any:
         if root not in p.parents or p.suffix.lower() not in IMAGE_TYPES or not p.is_file():
             raise HTTPException(404, "no such file")
         return FileResponse(p, media_type=IMAGE_TYPES[p.suffix.lower()])
+
+    ex = explore.Explore(cfg, lambda: studio.species(snap()), kw.get("explore_transport"))
+
+    async def outside(coro: Any) -> Any:
+        try:
+            return await coro
+        except explore.NotFound as e:
+            raise HTTPException(404, str(e)) from e
+        except explore.ExploreError as e:
+            raise HTTPException(502, str(e)) from e
+
+    @app.get("/api/studio/explore/species", response_model=models.ExploreSpeciesOut)
+    async def explore_species(q: str) -> Any:
+        """Taxa matching a common or scientific name, whether or not the library has them."""
+        return await outside(ex.species(q))
+
+    @app.get("/api/studio/explore/taxon/{key}", response_model=models.ExploreTaxonOut)
+    async def explore_taxon(key: int) -> Any:
+        """The taxon's senses, ranked by how many papers cover each."""
+        return await outside(ex.taxon(key))
+
+    @app.get(
+        "/api/studio/explore/taxon/{key}/{sense}/papers", response_model=models.ExplorePapersOut
+    )
+    async def explore_papers(key: int, sense: str, sort: str = "cited", page: int = 1) -> Any:
+        """Papers on one sense of the taxon (sort: cited | recent), 25 a page."""
+        return await outside(ex.papers(key, sense, sort, page))
 
     add_research_routes(app, cfg, kw.get("research_transport"))
 
