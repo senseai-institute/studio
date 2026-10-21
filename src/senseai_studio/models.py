@@ -172,10 +172,12 @@ class ExplorePapersOut(Envelope):
 
     taxon: Taxon
     sense: dict[str, Any]
-    filter: str = Field(description="the OpenAlex filter the papers came from")
+    source: str = Field(description="openalex, or europepmc when OpenAlex is rate-limiting")
+    filter: str = Field(description="the query the papers came from, in that source's syntax")
     sort: str
     page: int
     per_page: int
+    pages: int
     total: int
     papers: list[Open]
     years: list[Open]

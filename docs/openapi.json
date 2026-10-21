@@ -881,10 +881,15 @@
       "type": "object",
       "title": "Sense"
      },
+     "source": {
+      "type": "string",
+      "title": "Source",
+      "description": "openalex, or europepmc when OpenAlex is rate-limiting"
+     },
      "filter": {
       "type": "string",
       "title": "Filter",
-      "description": "the OpenAlex filter the papers came from"
+      "description": "the query the papers came from, in that source's syntax"
      },
      "sort": {
       "type": "string",
@@ -897,6 +902,10 @@
      "per_page": {
       "type": "integer",
       "title": "Per Page"
+     },
+     "pages": {
+      "type": "integer",
+      "title": "Pages"
      },
      "total": {
       "type": "integer",
@@ -923,10 +932,12 @@
      "provenance",
      "taxon",
      "sense",
+     "source",
      "filter",
      "sort",
      "page",
      "per_page",
+     "pages",
      "total",
      "papers",
      "years"

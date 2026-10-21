@@ -45,7 +45,7 @@ Two rules shape Studio:
 | **Pipeline** | The ten steps (`content/pipeline.yaml`, or profiles' `docs/pipeline/steps.yaml`) as a checklist with dates and evidence, and the clock: days since step 1, *partial* when steps were done out of order. |
 | **Use cases** | `content/use_cases/<niche>.<sense>.md`, rendered, with the pipeline step beside every claim. |
 | **Research** | Only when `RESEARCH_URL` is set: the research service's chat focused on `<clade>.senses.<sense>`, with its approval cards. |
-| **Explore** (`/studio/explore`) | Any animal, whether or not the library has it. Search by common or scientific name (GBIF's backbone taxonomy). A taxon's page ranks its senses by how many papers name the animal and the sense in their title or abstract (OpenAlex; the terms per sense are in `content/senses.yaml`, and each count shows the query it came from). A sense's page lists those papers, most cited or newest, with papers per year, abstracts and free full-text links. When `RESEARCH_URL` is set, *Summarise this research* asks the research assistant for a sourced summary. Links into the workspace when the library covers the taxon. |
+| **Explore** (`/studio/explore`) | Any animal, whether or not the library has it. Search by common or scientific name (GBIF's backbone taxonomy). A taxon's page ranks its senses by how many papers name the animal and the sense in their title or abstract (OpenAlex; the terms per sense are in `content/senses.yaml`, and each count shows the query it came from). A sense's page lists those papers, most cited or newest, with papers per year, abstracts and free full-text links. If OpenAlex is rate-limiting (429), counts and papers come from Europe PMC instead, and the page says so. When `RESEARCH_URL` is set, *Summarise this research* asks the research assistant for a sourced summary. Links into the workspace when the library covers the taxon. |
 
 Screenshots on the real stack (structured prior, no training, circuits P1) are in
 [`docs/screens/`](docs/screens):
@@ -125,7 +125,7 @@ Set these service variables:
 | `RESEARCH_URL` | no | shows the Research tab: `http://${{research.RAILWAY_PRIVATE_DOMAIN}}:8100` |
 | `RESEARCH_PROXY_TOKEN` | with `RESEARCH_URL` | `${{research.RESEARCH_PROXY_TOKEN}}`, the shared secret research checks |
 | `SENSEAI_CONTACT_EMAIL` | no | sent to OpenAlex so Explore's searches use its faster queue (same variable as research) |
-| `OPENALEX_API_KEY` | no | an OpenAlex key, for a larger daily allowance |
+| `OPENALEX_API_KEY` | recommended | a free OpenAlex key (openalex.org/settings/api), for a larger allowance. Without it Explore often falls back to Europe PMC. If research has one: `${{research.OPENALEX_API_KEY}}` |
 
 Railway sets `PORT` itself. The clone is refreshed on each deploy or restart. Without a bench
 stack in the container, every screen except Run works, and Run says why it cannot.

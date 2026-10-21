@@ -17,7 +17,9 @@ makes no model call here: summaries are the research service's (the Research tab
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
+import re
 import time
 from typing import Any
 
@@ -29,6 +31,8 @@ from senseai_studio.settings import Settings
 
 GBIF = "https://api.gbif.org/v1"
 OPENALEX = "https://api.openalex.org"
+EUROPEPMC = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+BACKOFF = (1.0, 2.0)  # seconds before each retry of a 429
 BACKBONE = "d7dddbf4-2cf0-4f39-9b2a-bb099caae36c"  # GBIF Backbone Taxonomy
 RANKS = ("SPECIES", "SUBSPECIES", "GENUS", "FAMILY", "ORDER", "CLASS")
 TTL = 6 * 3600
@@ -38,10 +42,17 @@ WORK_FIELDS = (
     "open_access,abstract_inverted_index"
 )
 SORTS = {"cited": "cited_by_count:desc", "recent": "publication_date:desc"}
+EPMC_SORTS = {"cited": "CITED desc", "recent": "P_PDATE_D desc"}
+LIMIT_PAUSE = 60.0  # seconds to use Europe PMC after OpenAlex said 429
+EPMC_MAX = 1000  # Europe PMC's largest page: the fallback reaches page EPMC_MAX / PER_PAGE
 
 
 class ExploreError(Exception):
     """An outside service failed or answered with something unusable."""
+
+
+class RateLimited(ExploreError):
+    """The service answered 429 after the retries."""
 
 
 class NotFound(Exception):
@@ -79,6 +90,51 @@ def english_names(rows: list[dict[str, Any]]) -> list[str]:
     return out
 
 
+def _int(v: Any) -> int | None:
+    return int(v) if str(v or "").isdigit() else None
+
+
+def epmc_any(terms: list[str]) -> str:
+    """Europe PMC: any of the terms in the title or abstract."""
+    qs = [_quote(t) for t in terms if t.strip()]
+    return "(" + " OR ".join(f"TITLE:{q} OR ABSTRACT:{q}" for q in qs) + ")"
+
+
+def epmc_query(taxon: list[str], sense: list[str]) -> str:
+    """The Europe PMC twin of the OpenAlex filter: the taxon and one of the sense's terms."""
+    return f"{epmc_any(taxon)} AND {epmc_any(sense)}"
+
+
+def epmc_link(r: dict[str, Any]) -> str:
+    """The Europe PMC page of a result."""
+    return f"https://europepmc.org/article/{r.get('source', 'MED')}/{r.get('id', '')}"
+
+
+def epmc_paper(r: dict[str, Any]) -> dict[str, Any]:
+    """A Europe PMC ``core`` result in the shape of an OpenAlex paper."""
+    authors = [a.strip() for a in str(r.get("authorString") or "").rstrip(".").split(",")]
+    authors = [a for a in authors if a]
+    journal = ((r.get("journalInfo") or {}).get("journal") or {}).get("title")
+    text = re.sub(r"<[^>]+>", " ", str(r.get("abstractText") or ""))
+    text = re.sub(r"\s+", " ", text).strip()
+    pmcid = r.get("pmcid")
+    return {
+        "id": epmc_link(r),
+        "doi": f"https://doi.org/{r['doi']}" if r.get("doi") else None,
+        "title": r.get("title"),
+        "year": _int(r.get("pubYear")),
+        "type": "review" if "review" in str(r.get("pubType") or "").lower() else "article",
+        "venue": journal or r.get("journalTitle"),
+        "authors": authors[:6],
+        "more_authors": max(len(authors) - 6, 0),
+        "cited_by": int(r.get("citedByCount") or 0),
+        "open_access": f"https://europepmc.org/article/PMC/{pmcid}"
+        if pmcid and r.get("isOpenAccess") == "Y"
+        else None,
+        "abstract": (text if len(text) <= 1500 else text[:1500].rsplit(" ", 1)[0] + " …") or None,
+    }
+
+
 class Explore:
     """Talks to GBIF and OpenAlex, caching answers."""
 
@@ -92,7 +148,8 @@ class Explore:
         self.library = library  # () -> the species() payload (cards), for library links
         self.transport = transport
         self.cache: dict[str, tuple[float, Any]] = {}
-        self.sem = asyncio.Semaphore(4)
+        self.sem = asyncio.Semaphore(3)
+        self.limited_until = 0.0
 
     # ------------------------------------------------------------------ plumbing
 
@@ -113,15 +170,36 @@ class Explore:
         hit = self.cache.get(key)
         if hit and time.monotonic() - hit[0] < TTL:
             return hit[1]
-        host = "GBIF" if url.startswith(GBIF) else "OpenAlex"
-        async with self.sem:
-            try:
-                async with httpx.AsyncClient(transport=self.transport, timeout=20) as c:
-                    r = await c.get(url, params=params, headers={"User-Agent": "senseai-studio"})
-            except httpx.HTTPError as e:
-                raise ExploreError(f"{host} unreachable: {type(e).__name__}") from e
+        host = (
+            "GBIF"
+            if url.startswith(GBIF)
+            else "Europe PMC"
+            if url.startswith(EUROPEPMC)
+            else "OpenAlex"
+        )
+        openalex = host == "OpenAlex"
+        for n, wait in enumerate((*BACKOFF, None)):
+            async with self.sem:
+                if openalex and n == 0 and not self._openalex_ok():
+                    # another request just got a 429: don't add to the pile
+                    raise RateLimited(f"{host} is limiting requests (429)")
+                try:
+                    async with httpx.AsyncClient(transport=self.transport, timeout=20) as c:
+                        r = await c.get(
+                            url, params=params, headers={"User-Agent": "senseai-studio"}
+                        )
+                except httpx.HTTPError as e:
+                    raise ExploreError(f"{host} unreachable: {type(e).__name__}") from e
+            if openalex:
+                self.limited_until = time.monotonic() + LIMIT_PAUSE if r.status_code == 429 else 0.0
+            if r.status_code != 429 or wait is None:
+                break
+            after = r.headers.get("retry-after", "")
+            await asyncio.sleep(min(float(after), 3.0) if after.isdigit() else wait)
         if r.status_code == 404:
             raise NotFound(f"{host} has no {url.rsplit('/', 1)[-1]}")
+        if r.status_code == 429:
+            raise RateLimited(f"{host} is limiting requests (429)")
         if r.status_code >= 400:
             raise ExploreError(f"{host} answered {r.status_code}")
         data = r.json()
@@ -229,8 +307,8 @@ class Explore:
         names = english_names((v or {}).get("results", []))[:3]
         row = self._taxon(t, names)
         row["library"] = self._library_for(t)
-        terms = [row["scientific_name"], *names]
-        row["query"] = any_of([x for x in terms if x])
+        row["terms"] = [x for x in (row["scientific_name"], *names) if x]
+        row["query"] = any_of(row["terms"])
         return row
 
     def _sense(self, sense: str) -> tuple[dict[str, Any], int | None]:
@@ -243,6 +321,53 @@ class Explore:
     def _filter(self, taxon: dict[str, Any], terms: list[str]) -> str:
         return f"title_and_abstract.search:{taxon['query']} AND {any_of(terms)}"
 
+    def _openalex_ok(self) -> bool:
+        return time.monotonic() >= self.limited_until
+
+    async def _count_openalex(self, t: dict[str, Any], terms: list[str]) -> dict[str, Any]:
+        flt = self._filter(t, terms)
+        d = await self._get(
+            f"{OPENALEX}/works",
+            {
+                "filter": flt,
+                "per-page": 3,
+                "sort": "cited_by_count:desc",
+                "select": "id,title,publication_year,cited_by_count",
+            }
+            | self._openalex_params(),
+        )
+        return {
+            "source": "openalex",
+            "filter": flt,
+            "count": int(((d or {}).get("meta") or {}).get("count") or 0),
+            "top": [
+                {"title": w.get("title"), "year": w.get("publication_year"), "id": w.get("id")}
+                for w in (d or {}).get("results", [])
+            ],
+        }
+
+    async def _count_epmc(self, t: dict[str, Any], terms: list[str]) -> dict[str, Any]:
+        q = epmc_query(t["terms"], terms)
+        d = await self._get(
+            EUROPEPMC,
+            {
+                "query": q,
+                "format": "json",
+                "pageSize": 3,
+                "sort": EPMC_SORTS["cited"],
+                "resultType": "lite",
+            },
+        )
+        return {
+            "source": "europepmc",
+            "filter": q,
+            "count": int((d or {}).get("hitCount") or 0),
+            "top": [
+                {"title": r.get("title"), "year": _int(r.get("pubYear")), "id": epmc_link(r)}
+                for r in ((d or {}).get("resultList") or {}).get("result", [])
+            ],
+        }
+
     async def taxon(self, key: int) -> dict[str, Any]:
         """The taxon and each sense with how many papers cover it, most covered first."""
         t = await self._taxon_full(key)
@@ -252,36 +377,23 @@ class Explore:
 
         async def count(sid: str, s: dict[str, Any]) -> dict[str, Any]:
             terms = [str(x) for x in s.get("terms") or [sid]]
-            flt = self._filter(t, terms)
             row: dict[str, Any] = {
                 "id": sid,
                 "label": s.get("label") or sid,
                 "terms": terms,
-                "filter": flt,
+                "filter": self._filter(t, terms),
+                "source": "openalex",
                 "count": None,
                 "top": [],
                 "error": None,
             }
             try:
-                d = await self._get(
-                    f"{OPENALEX}/works",
-                    {
-                        "filter": flt,
-                        "per-page": 3,
-                        "sort": "cited_by_count:desc",
-                        "select": "id,title,publication_year,cited_by_count",
-                    }
-                    | self._openalex_params(),
-                )
+                if self._openalex_ok():
+                    with contextlib.suppress(RateLimited):
+                        return row | await self._count_openalex(t, terms)
+                return row | await self._count_epmc(t, terms)
             except ExploreError as e:
-                row["error"] = str(e)
-                return row
-            row["count"] = int(((d or {}).get("meta") or {}).get("count") or 0)
-            row["top"] = [
-                {"title": w.get("title"), "year": w.get("publication_year"), "id": w.get("id")}
-                for w in (d or {}).get("results", [])
-            ]
-            return row
+                return row | {"error": str(e)}
 
         items = [(k, v) for k, v in (doc.data or {}).items() if isinstance(v, dict)]
         senses = await asyncio.gather(*(count(k, v) for k, v in items))
@@ -293,28 +405,19 @@ class Explore:
         senses.sort(key=lambda s: (-(s["count"] or 0), s["label"]))
         for i, s in enumerate(senses):
             p.add(f"senses/{i}/terms", doc.label, doc.line(s["id"], "terms"))
-            p.add(f"senses/{i}/count", "openalex:works", s["filter"])
+            p.add(f"senses/{i}/count", f"{s['source']}:works", s["filter"])
         return {"taxon": t, "senses": senses, "provenance": p.out()}
 
-    async def papers(
-        self, key: int, sense: str, sort: str = "cited", page: int = 1
+    async def _papers_openalex(
+        self, t: dict[str, Any], terms: list[str], sort: str, page: int
     ) -> dict[str, Any]:
-        """The papers on one sense of the taxon, a page at a time, and how many per year."""
-        s, line = self._sense(sense)
-        t = await self._taxon_full(key)
-        terms = [str(x) for x in s.get("terms") or [sense]]
         flt = self._filter(t, terms)
         base = self._openalex_params() | {"filter": flt}
         works, years = await asyncio.gather(
             self._get(
                 f"{OPENALEX}/works",
                 base
-                | {
-                    "per-page": PER_PAGE,
-                    "page": max(page, 1),
-                    "sort": SORTS.get(sort, SORTS["cited"]),
-                    "select": WORK_FIELDS,
-                },
+                | {"per-page": PER_PAGE, "page": page, "sort": SORTS[sort], "select": WORK_FIELDS},
             ),
             self._get(f"{OPENALEX}/works", base | {"group_by": "publication_year"}),
         )
@@ -350,12 +453,65 @@ class Explore:
             ),
             key=lambda g: g["year"],
         )
+        total = int(((works or {}).get("meta") or {}).get("count") or 0)
+        return {
+            "source": "openalex",
+            "filter": flt,
+            "total": total,
+            "papers": papers,
+            "years": hist,
+            "pages": -(-total // PER_PAGE),
+        }
+
+    async def _papers_epmc(
+        self, t: dict[str, Any], terms: list[str], sort: str, page: int
+    ) -> dict[str, Any]:
+        """Europe PMC pages by cursor, so take one large page and cut out the one asked for."""
+        q = epmc_query(t["terms"], terms)
+        if page * PER_PAGE > EPMC_MAX:
+            raise NotFound(f"Europe PMC shows the first {EPMC_MAX} papers only")
+        d = await self._get(
+            EUROPEPMC,
+            {
+                "query": q,
+                "format": "json",
+                "pageSize": page * PER_PAGE,
+                "sort": EPMC_SORTS[sort],
+                "resultType": "core",
+            },
+        )
+        rows = ((d or {}).get("resultList") or {}).get("result", [])
+        total = int((d or {}).get("hitCount") or 0)
+        return {
+            "source": "europepmc",
+            "filter": q,
+            "total": total,
+            "papers": [epmc_paper(r) for r in rows[(page - 1) * PER_PAGE :]],
+            "years": [],
+            "pages": -(-min(total, EPMC_MAX) // PER_PAGE),
+        }
+
+    async def papers(
+        self, key: int, sense: str, sort: str = "cited", page: int = 1
+    ) -> dict[str, Any]:
+        """The papers on one sense of the taxon, a page at a time, and how many per year."""
+        s, line = self._sense(sense)
+        t = await self._taxon_full(key)
+        terms = [str(x) for x in s.get("terms") or [sense]]
+        sort = sort if sort in SORTS else "cited"
+        page = max(page, 1)
+        got: dict[str, Any] | None = None
+        if self._openalex_ok():
+            with contextlib.suppress(RateLimited):
+                got = await self._papers_openalex(t, terms, sort, page)
+        if got is None:
+            got = await self._papers_epmc(t, terms, sort, page)
         p = Prov()
         p.add("taxon", "gbif:species", key)
         p.add("sense/terms", self.senses().label, line)
-        p.add("papers", "openalex:works", flt)
+        p.add("papers", f"{got['source']}:works", got["filter"])
         lib = t["library"]
-        return {
+        return got | {
             "taxon": t,
             "sense": {
                 "id": sense,
@@ -363,12 +519,8 @@ class Explore:
                 "terms": terms,
                 "library": (lib or {}).get("senses", {}).get(sense),
             },
-            "filter": flt,
-            "sort": sort if sort in SORTS else "cited",
-            "page": max(page, 1),
+            "sort": sort,
+            "page": page,
             "per_page": PER_PAGE,
-            "total": int(((works or {}).get("meta") or {}).get("count") or 0),
-            "papers": papers,
-            "years": hist,
             "provenance": p.out(),
         }

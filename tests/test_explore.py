@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 from senseai_studio.app import create_app
@@ -84,3 +85,31 @@ def test_outside_down_is_502(cfg: Settings) -> None:
 
     r = _client(cfg, down).get("/api/studio/explore/species", params={"q": "panther"})
     assert r.status_code == 502 and "GBIF unreachable" in r.json()["detail"]
+
+
+def test_openalex_429_falls_back_to_europe_pmc(
+    cfg: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from senseai_studio import explore
+
+    monkeypatch.setattr(explore, "BACKOFF", (0.0,))
+    c = _client(cfg, fake_outside.limited)
+    fake_outside.SEEN.clear()
+    d = c.get("/api/studio/explore/taxon/5219436").json()
+    assert d["senses"][0]["id"] == "vision" and d["senses"][0]["count"] == 206
+    assert d["senses"][0]["source"] == "europepmc"
+    assert d["senses"][0]["filter"].startswith(
+        '(TITLE:"Panthera pardus" OR ABSTRACT:"Panthera pardus"'
+    )
+    # after the first 429, the other senses go straight to Europe PMC
+    assert sum(1 for r in fake_outside.SEEN if r.url.path == "/works") <= 6
+    p = c.get("/api/studio/explore/taxon/5219436/vision/papers", params={"page": 2}).json()
+    assert p["source"] == "europepmc" and p["total"] == 206 and p["pages"] == 9
+    assert p["papers"][0]["title"] == "Leopard vision, Europe PMC 25"
+    first = c.get("/api/studio/explore/taxon/5219436/vision/papers").json()["papers"][0]
+    assert (
+        first["authors"] == ["Smith A", "Jones B"]
+        and first["abstract"] == "Results Leopards see well."
+    )
+    assert first["open_access"] == "https://europepmc.org/article/PMC/PMC0"
+    assert first["doi"] == "https://doi.org/10.2000/vision.0"
