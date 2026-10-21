@@ -65,7 +65,7 @@ def test_proxy_forwards_user_and_streams(cfg: Settings) -> None:
 
 def test_proxy_unreachable(cfg: Settings) -> None:
     def boom(_r: httpx.Request) -> httpx.Response:
-        raise httpx.ConnectError("refused")
+        raise httpx.ConnectError("")
 
     c = TestClient(
         create_app(
@@ -73,7 +73,11 @@ def test_proxy_unreachable(cfg: Settings) -> None:
             research_transport=httpx.MockTransport(boom),
         )
     )
-    assert c.get("/api/studio/research/health").status_code == 502
+    r = c.get("/api/studio/research/health")
+    assert r.status_code == 502
+    assert r.json()["detail"].startswith(
+        "research service unreachable at http://127.0.0.1:1: ConnectError (is it running"
+    )
 
 
 def test_proxy_sends_the_shared_token_and_drops_spoofed_identity(cfg: Settings) -> None:

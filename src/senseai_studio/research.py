@@ -93,7 +93,11 @@ def add_research_routes(
             resp = await client.send(req, stream=True)
         except httpx.HTTPError as e:
             await client.aclose()
-            raise HTTPException(502, f"research service unreachable: {e}") from e
+            raise HTTPException(
+                502,
+                f"research service unreachable at {cfg.research_url}: "
+                f"{type(e).__name__}{f': {e}' if str(e) else ''} (is it running, on that port?)",
+            ) from e
 
         async def body() -> AsyncIterator[bytes]:
             try:
