@@ -91,6 +91,39 @@ def handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(200, json={"results": NAMES[t["key"]]})
     if path.startswith("/v1/species/"):
         return httpx.Response(404, json={})
+    if path == "/europepmc/webservices/rest/search":
+        query = q.get("query", "")
+        sense = next(
+            (
+                s
+                for s, w in (
+                    ("vision", "retina"),
+                    ("hearing", "auditory"),
+                    ("olfaction", "olfactory"),
+                )
+                if w in query
+            ),
+            None,
+        )
+        n = COUNTS.get(sense or "", 0) // 2
+        size = int(q.get("pageSize", "25"))
+        rows = [
+            {
+                "id": str(9000 + i),
+                "source": "MED",
+                "doi": f"10.2000/{sense}.{i}",
+                "title": f"Leopard {sense}, Europe PMC {i}",
+                "pubYear": str(2015 - i),
+                "authorString": "Smith A, Jones B.",
+                "journalInfo": {"journal": {"title": "Vision Research"}},
+                "citedByCount": 50 - i,
+                "isOpenAccess": "Y",
+                "pmcid": f"PMC{i}",
+                "abstractText": "<h4>Results</h4>Leopards <b>see</b> well.",
+            }
+            for i in range(min(n, size))
+        ]
+        return httpx.Response(200, json={"hitCount": n, "resultList": {"result": rows}})
     if path == "/works":
         flt = q.get("filter", "")
         sense = next(
@@ -125,3 +158,11 @@ def handler(request: httpx.Request) -> httpx.Response:
             },
         )
     return httpx.Response(404, json={})
+
+
+def limited(request: httpx.Request) -> httpx.Response:
+    """OpenAlex answers 429; GBIF and Europe PMC work."""
+    if request.url.path == "/works":
+        SEEN.append(request)
+        return httpx.Response(429, json={"error": "rate limited"})
+    return handler(request)

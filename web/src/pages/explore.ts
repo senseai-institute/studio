@@ -13,6 +13,9 @@ import { chatEvent, transcriptEvents, type ChatEvent } from "../research/adapt.t
 import { research } from "../research/client.ts";
 import { shell } from "../shell.ts";
 
+const SOURCE = { openalex: "OpenAlex", europepmc: "Europe PMC" } as const;
+const FALLBACK = "OpenAlex is limiting requests right now, so these come from Europe PMC (life-science papers only). Set OPENALEX_API_KEY on Studio for a larger OpenAlex allowance.";
+
 const name = (t: Taxon): string => t.common_names[0] ?? t.scientific_name ?? String(t.key);
 const lineage = (t: Taxon): string =>
   ["class", "order", "family", "genus"].map((k) => t.classification[k]).filter(Boolean).join(" › ");
@@ -107,7 +110,7 @@ function senseRow(key: number, s: SenseHits, max: number, res: Parameters<typeof
   fill.style.width = `${s.count ? Math.max(4, (100 * Math.log10(1 + s.count)) / Math.log10(1 + max)) : 0}%`;
   bar.append(fill);
   const count = el("span", "count mono", s.count === null ? "—" : s.count.toLocaleString());
-  count.title = s.error ?? `OpenAlex works matching ${s.filter}`;
+  count.title = s.error ?? `${SOURCE[s.source]} papers matching ${s.filter}`;
   const label = el("span", "label");
   label.append(el("strong", undefined, s.label));
   if (s.library) label.append(" ", badge(s.library.state, s.library.state === "modelled" ? "teal" : "plain", "this sense is in the library"));
@@ -151,7 +154,9 @@ async function taxonPage(root: HTMLElement, key: number): Promise<void> {
       d.append(r2);
       sec.body.append(d);
     }
-    sec.body.append(el("p", "faint small", `Names searched: ${t.query ?? ""}. Sense terms: studio/content/senses.yaml. Papers: OpenAlex.`));
+    const used = [...new Set(res.senses.filter((s) => !s.error).map((s) => SOURCE[s.source]))];
+    if (res.senses.some((s) => s.source === "europepmc")) sec.body.prepend(el("p", "note warn", FALLBACK));
+    sec.body.append(el("p", "faint small", `Names searched: ${t.query ?? ""}. Sense terms: studio/content/senses.yaml. Papers: ${used.join(", ") || "none"}.`));
     holder.append(sec.box, inspect(res));
   } catch (e) {
     holder.replaceChildren(errorBox(e));
@@ -317,13 +322,14 @@ async function sensePage(root: HTMLElement, key: number, sense: string): Promise
       toggle.append(a);
     }
     sec.tools.append(badge(`${res.total.toLocaleString()} papers`, "plain"), toggle);
+    if (res.source === "europepmc") sec.body.append(el("p", "note warn", FALLBACK));
     if (res.years.length) sec.body.append(years(res));
     const ol = el("ol", "papers");
     ol.start = (res.page - 1) * res.per_page + 1;
     for (const p of res.papers) ol.append(paperItem(p));
     if (!res.papers.length) sec.body.append(empty("No papers name this animal and this sense in their title or abstract."));
     sec.body.append(ol);
-    const pages = Math.ceil(res.total / res.per_page);
+    const pages = res.pages;
     if (pages > 1) {
       const nav = el("nav", "pager");
       if (res.page > 1) nav.append(link("← Previous", `?sort=${res.sort}&page=${res.page - 1}`));
@@ -332,7 +338,7 @@ async function sensePage(root: HTMLElement, key: number, sense: string): Promise
       sec.body.append(nav);
     }
     const q = el("p", "faint small");
-    q.append("OpenAlex query: ", el("code", "mono", res.filter));
+    q.append(`${SOURCE[res.source]} query: `, el("code", "mono", res.filter));
     sec.body.append(q);
     holder.append(sec.box, inspect(res));
   } catch (e) {

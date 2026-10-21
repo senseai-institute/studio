@@ -247,6 +247,7 @@ export interface SenseHits {
   label: string;
   terms: string[];
   filter: string;
+  source: "openalex" | "europepmc";
   count: number | null;
   top: { title: string | null; year: number | null; id: string }[];
   error: string | null;
@@ -275,10 +276,12 @@ export interface Paper {
 export interface ExplorePapers extends WithProv {
   taxon: Taxon;
   sense: { id: string; label: string; terms: string[]; library: { id: string; state: Chip["state"] } | null };
+  source: "openalex" | "europepmc";
   filter: string;
   sort: "cited" | "recent";
   page: number;
   per_page: number;
+  pages: number;
   total: number;
   papers: Paper[];
   years: { year: number; count: number }[];
