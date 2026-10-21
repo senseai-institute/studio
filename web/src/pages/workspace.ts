@@ -3,10 +3,11 @@
 //
 // Workspace /studio/{clade}/{sense}/{tab}: an abstract-style header (what this sense is, the
 // counts that matter, the pipeline stepper, the honest tags) and one tab at a time. Tabs are
-// links (the URL is the state) and keys 1–6.
+// links (the URL is the state) and keys 1–7.
 
 import { api, type Card, type Health, type Pipeline } from "../api.ts";
 import { badge, el, errorBox, tags } from "../dom.ts";
+import { designTab } from "../tabs/design.ts";
 import { modelTab } from "../tabs/model.ts";
 import { pipelineTab } from "../tabs/pipeline.ts";
 import { researchTab } from "../tabs/research.ts";
@@ -18,6 +19,7 @@ import { shell, species } from "../shell.ts";
 export const TABS = [
   { id: "sources", label: "Sources" },
   { id: "model", label: "Model" },
+  { id: "design", label: "Design" },
   { id: "run", label: "Run" },
   { id: "pipeline", label: "Pipeline" },
   { id: "use-cases", label: "Use cases" },
@@ -126,6 +128,7 @@ export async function workspacePage(root: HTMLElement, clade: string, sense: str
   try {
     if (tab === "sources") await sourcesTab(body, clade, sense);
     else if (tab === "model") await modelTab(body, clade, sense);
+    else if (tab === "design") await designTab(body, clade, sense);
     else if (tab === "run") await runTab(body, clade, sense);
     else if (tab === "pipeline") pipelineTab(body, pl);
     else if (tab === "use-cases") await useCasesTab(body, clade, sense);

@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 TOKEN = "test-proxy-token"
 CLAIM = "lib:felidae.senses.vision.detection_threshold"
+CANDIDATE = "cc:felidae.vision:felidae.senses.vision.measurements.rf_center_radius"
 RECORDED = json.loads(
     (
         Path(__file__).resolve().parents[1] / "web/src/research/fixtures/research_events.json"
@@ -112,6 +113,91 @@ def make_app() -> FastAPI:
                 "unverified_reason": "abstract only",
                 "revision": len(state["history"]),
             },
+        }
+
+    candidate = {
+        "id": CANDIDATE,
+        "clade": "felidae",
+        "sense": "vision",
+        "modality": "vision",
+        "library_path": "felidae.senses.vision.measurements.rf_center_radius",
+        "evidence_clade": "felidae",
+        "claim_ids": ["lib:felidae.senses.vision.measurements.rf_center_radius"],
+        "mechanism": "felidae.senses.vision.measurements.rf_center_radius = 0.8 deg",
+        "likelihood": 1.0,
+        "quality": 0.39,
+        "priority": 0.39,
+        "score_parts": {
+            "likelihood": {"species": {"value": "same species", "weight": 1.0}},
+            "quality": {"status": {"value": "extracted", "weight": 0.75}},
+        },
+        "circuitability": {
+            "level": "knob",
+            "circuit": "cs",
+            "knob": "cs.sigma_center_deg",
+            "value": 0.57,
+            "score": 1.0,
+            "priority": 0.39,
+            "checks": [{"name": "units", "ok": True, "detail": "0.8 deg → 0.566 deg"}],
+            "summary": "sets cs.sigma_center_deg = 0.57 deg (exact)",
+        },
+        "circuits_version": "0.1.0-fake",
+        "circuits_note": "",
+        "status": "open",
+        "design_ids": [],
+    }
+    app.state.decisions = decisions = []
+
+    @app.get("/api/research/circuit-candidates")
+    def candidates(clade: str | None = None, sense: str | None = None) -> list[dict[str, Any]]:
+        return [candidate] if (clade, sense) in ((None, None), ("felidae", "vision")) else []
+
+    @app.post("/api/research/circuit-candidates/refresh")
+    def refresh() -> dict[str, Any]:
+        return {"stored": 1, "skipped": 0, "circuits": "checked"}
+
+    @app.post("/api/research/circuit-candidates/{cid:path}/decision")
+    async def candidate_decision(cid: str, request: Request) -> dict[str, Any]:
+        body = await request.json()
+        decisions.append(body)
+        candidate["status"] = body["status"]
+        return candidate
+
+    @app.get("/api/research/circuit-candidates/{cid:path}")
+    def candidate_detail(cid: str) -> dict[str, Any]:
+        if cid != CANDIDATE:
+            raise HTTPException(404, "no candidate")
+        return candidate | {
+            "claims": [
+                {
+                    "claim_id": candidate["claim_ids"][0],
+                    "library_path": candidate["library_path"],
+                    "value": "0.8 deg",
+                    "status": "extracted",
+                    "species": "Felis catus",
+                    "conditions": "X cells near area centralis",
+                    "method": "electrophysiology",
+                    "sources": [],
+                    "passage": {
+                        "passage_id": "p-1",
+                        "section": "Results",
+                        "quote": "centre radius of 0.8 deg",
+                        "before": "",
+                        "after": "",
+                        "source": {
+                            "source_id": "s",
+                            "title": "Cat X cells",
+                            "authors": "Enroth-Cugell & Robson",
+                            "year": 1966,
+                            "venue": "J Physiol",
+                            "doi": None,
+                            "link": None,
+                            "full_text": True,
+                            "checked": "full text",
+                        },
+                    },
+                }
+            ],
         }
 
     @app.get("/api/research/settings")

@@ -805,6 +805,419 @@
      }
     }
    }
+  },
+  "/api/studio/{clade}/{sense}/design": {
+   "get": {
+    "summary": "Design Page",
+    "description": "Circuit types and knobs for this sense, research's candidates, and the designs.",
+    "operationId": "design_page_api_studio__clade___sense__design_get",
+    "parameters": [
+     {
+      "name": "clade",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Clade"
+      }
+     },
+     {
+      "name": "sense",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sense"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DesignPageOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/{clade}/{sense}/designs": {
+   "post": {
+    "summary": "Design New",
+    "description": "Start a design (draft); research hears which candidates it uses.",
+    "operationId": "design_new_api_studio__clade___sense__designs_post",
+    "parameters": [
+     {
+      "name": "clade",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Clade"
+      }
+     },
+     {
+      "name": "sense",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sense"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DesignBody"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DesignOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/designs/{did}": {
+   "get": {
+    "summary": "Design Get",
+    "operationId": "design_get_api_studio_designs__did__get",
+    "parameters": [
+     {
+      "name": "did",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Did"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DesignOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "summary": "Design Edit",
+    "description": "Edit values, bindings, title or profile; the design goes back to draft.",
+    "operationId": "design_edit_api_studio_designs__did__put",
+    "parameters": [
+     {
+      "name": "did",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Did"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DesignBody"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DesignOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/designs/{did}/check": {
+   "post": {
+    "summary": "Design Check",
+    "description": "Validate the values and rerun every touched circuit's paper figure.",
+    "operationId": "design_check_api_studio_designs__did__check_post",
+    "parameters": [
+     {
+      "name": "did",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Did"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DesignOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/designs/{did}/adopt": {
+   "post": {
+    "summary": "Design Adopt",
+    "description": "Adopt a validated design: the profile spec patch, and research is told.",
+    "operationId": "design_adopt_api_studio_designs__did__adopt_post",
+    "parameters": [
+     {
+      "name": "did",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Did"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReasonBody"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DesignOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/designs/{did}/reject": {
+   "post": {
+    "summary": "Design Reject",
+    "operationId": "design_reject_api_studio_designs__did__reject_post",
+    "parameters": [
+     {
+      "name": "did",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Did"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReasonBody"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DesignOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/designs/{did}/patch": {
+   "get": {
+    "summary": "Design Patch",
+    "description": "The adopted design's profile spec diff (open it as a profiles PR).",
+    "operationId": "design_patch_api_studio_designs__did__patch_get",
+    "parameters": [
+     {
+      "name": "did",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Did"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/studio/design/figures": {
+   "post": {
+    "summary": "Design Figures",
+    "description": "The paper figures for these knob values (senseai-circuits figures).",
+    "operationId": "design_figures_api_studio_design_figures_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FiguresBody"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FiguresOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -863,6 +1276,306 @@
     ],
     "title": "Card",
     "description": "A clade on Home."
+   },
+   "DesignBody": {
+    "properties": {
+     "title": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Title"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Profile",
+      "description": "the profile spec the design is for"
+     },
+     "values": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Values",
+      "description": "knob -> value (dotted names)"
+     },
+     "bindings": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "additionalProperties": true,
+         "type": "object"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bindings",
+      "description": "knob -> {candidate_id, claim_ids, note}"
+     },
+     "candidate_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Candidate Ids",
+      "description": "research candidates used"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 5000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "title": "DesignBody",
+    "description": "A new or edited design: the senseai-circuits design@1 fields a person sets."
+   },
+   "DesignOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "clade": {
+      "type": "string",
+      "title": "Clade"
+     },
+     "sense": {
+      "type": "string",
+      "title": "Sense"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Profile"
+     },
+     "values": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Values"
+     },
+     "bindings": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Bindings"
+     },
+     "candidate_ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Candidate Ids"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status",
+      "description": "draft | validated | adopted | rejected"
+     },
+     "check": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check",
+      "description": "the last senseai-circuits design check"
+     },
+     "adoption": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Adoption"
+     },
+     "research_sync": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Research Sync",
+      "description": "decisions sent to research"
+     },
+     "history": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "History"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "id",
+     "title",
+     "clade",
+     "sense",
+     "profile",
+     "values",
+     "bindings",
+     "candidate_ids",
+     "status",
+     "check",
+     "adoption",
+     "research_sync",
+     "history"
+    ],
+    "title": "DesignOut",
+    "description": "A circuit design (senseai-circuits design@1 plus Studio's record of the people's side)."
+   },
+   "DesignPageOut": {
+    "properties": {
+     "provenance": {
+      "items": {
+       "$ref": "#/components/schemas/Provenance"
+      },
+      "type": "array",
+      "title": "Provenance"
+     },
+     "clade": {
+      "type": "string",
+      "title": "Clade"
+     },
+     "sense": {
+      "type": "string",
+      "title": "Sense"
+     },
+     "modality": {
+      "type": "string",
+      "title": "Modality"
+     },
+     "circuits": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Circuits"
+     },
+     "circuit_types": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Circuit Types"
+     },
+     "measures": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Measures"
+     },
+     "knobs": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Knobs"
+     },
+     "profiles": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Profiles"
+     },
+     "research": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Research"
+     },
+     "candidates": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Candidates",
+      "description": "research's circuit candidates, ranked"
+     },
+     "designs": {
+      "items": {
+       "$ref": "#/components/schemas/DesignOut"
+      },
+      "type": "array",
+      "title": "Designs"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "provenance",
+     "clade",
+     "sense",
+     "modality",
+     "circuits",
+     "circuit_types",
+     "measures",
+     "knobs",
+     "profiles",
+     "research",
+     "candidates",
+     "designs"
+    ],
+    "title": "DesignPageOut",
+    "description": "``GET /api/studio/{clade}/{sense}/design``."
    },
    "ExplorePapersOut": {
     "properties": {
@@ -1006,6 +1719,56 @@
     ],
     "title": "ExploreTaxonOut",
     "description": "``GET /api/studio/explore/taxon/{key}``."
+   },
+   "FiguresBody": {
+    "properties": {
+     "values": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Values"
+     },
+     "circuits": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Circuits"
+     }
+    },
+    "type": "object",
+    "title": "FiguresBody",
+    "description": "Knob values to draw the paper figures for."
+   },
+   "FiguresOut": {
+    "properties": {
+     "ok": {
+      "type": "boolean",
+      "title": "Ok"
+     },
+     "figures": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Figures"
+     }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+     "ok",
+     "figures"
+    ],
+    "title": "FiguresOut",
+    "description": "``POST /api/studio/design/figures``: senseai-circuits figures."
    },
    "HTTPValidationError": {
     "properties": {
@@ -1244,6 +2007,22 @@
     ],
     "title": "Provenance",
     "description": "Where one item of a response came from."
+   },
+   "ReasonBody": {
+    "properties": {
+     "rationale": {
+      "type": "string",
+      "maxLength": 5000,
+      "minLength": 1,
+      "title": "Rationale"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rationale"
+    ],
+    "title": "ReasonBody",
+    "description": "A person's reason for adopting or rejecting a design."
    },
    "RunBody": {
     "properties": {

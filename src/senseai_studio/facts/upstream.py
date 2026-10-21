@@ -362,6 +362,48 @@ def circuits(cfg: Settings) -> dict[str, Any]:
     return cached(("circuits", cfg.circuits_cmd), (int(time.time() // 60),), ask)
 
 
+def circuits_json(
+    cfg: Settings, args: list[str], *, stdin: Any = None, timeout: float = 120
+) -> Any:
+    """``senseai-circuits <args>`` with optional JSON on stdin; its JSON answer.
+
+    Failures come back as ``{"ok": False, "error": ...}`` (the CLI prints the same shape
+    itself for invalid input), never as an exception.
+    """
+    parts = shlex.split(cfg.circuits_cmd)
+    exe = parts and (shutil.which(parts[0]) or (Path(parts[0]).exists() and parts[0]))
+    if not exe:
+        return {"ok": False, "installed": False, "error": "circuits: not installed"}
+    try:
+        cp = subprocess.run(
+            [*parts, *args],
+            input=None if stdin is None else json.dumps(stdin),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {e}"}
+    try:
+        return json.loads(cp.stdout)
+    except ValueError:
+        err = (cp.stderr or cp.stdout).strip().splitlines()
+        return {
+            "ok": False,
+            "error": err[-1] if err else f"senseai-circuits exited {cp.returncode}",
+        }
+
+
+def catalogue(cfg: Settings) -> dict[str, Any]:
+    """``senseai-circuits catalogue --json``: circuit types and the measures that set knobs."""
+    return cached(
+        ("circuits-catalogue", cfg.circuits_cmd),
+        (int(time.time() // 60),),
+        lambda: circuits_json(cfg, ["catalogue", "--json"], timeout=60),
+    )
+
+
 # --------------------------------------------------------------------------- git
 
 

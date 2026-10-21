@@ -17,6 +17,16 @@
     GET  /api/studio/jobs/{id}/report                replay_report.md
     GET  /api/studio/jobs/{id}/files/{path}          a frame image the run wrote
     GET  /api/studio/health                          repos, SHAs, tools, data root
+    GET  /api/studio/{clade}/{sense}/design          circuit types, knobs, research candidates,
+                                                     designs (the Design tab)
+    POST /api/studio/{clade}/{sense}/designs         new design (from candidates) -> draft
+    GET  /api/studio/designs/{id}                    one design
+    PUT  /api/studio/designs/{id}                    edit (back to draft)
+    POST /api/studio/designs/{id}/check              senseai-circuits design check -> validated
+    POST /api/studio/designs/{id}/adopt              profile patch (circuits: block), tells research
+    POST /api/studio/designs/{id}/reject             with a reason, tells research
+    GET  /api/studio/designs/{id}/patch              the profile spec diff of an adopted design
+    POST /api/studio/design/figures                  paper figures for knob values (live preview)
     GET  /api/studio/explore/species?q=              any taxon by name (GBIF)
     GET  /api/studio/explore/taxon/{key}             its senses, ranked by papers (OpenAlex)
     GET  /api/studio/explore/taxon/{key}/{sense}/papers  the papers on one sense
@@ -30,7 +40,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -41,8 +51,8 @@ from fastapi.responses import (
 )
 from pydantic import BaseModel, Field
 
-from senseai_studio import __version__, explore, models, runs, studio
-from senseai_studio.auth import BasicAuth
+from senseai_studio import __version__, designs, explore, models, runs, studio
+from senseai_studio.auth import BasicAuth, user_of
 from senseai_studio.facts import upstream
 from senseai_studio.research import add_research_routes
 from senseai_studio.settings import PACKAGE_DIR, Settings
@@ -57,6 +67,32 @@ class RunBody(BaseModel):
     source: str = Field(description="a source id from run/options, e.g. synthetic or dsec:<name>")
     arms: list[str] = Field(min_length=1, description="arm ids from run/options")
     seconds: float = Field(default=runs.DEFAULT_SECONDS, gt=0, le=runs.MAX_SECONDS)
+
+
+class DesignBody(BaseModel):
+    """A new or edited design: the senseai-circuits design@1 fields a person sets."""
+
+    title: str | None = Field(default=None, max_length=200)
+    profile: str | None = Field(default=None, description="the profile spec the design is for")
+    values: dict[str, Any] | None = Field(default=None, description="knob -> value (dotted names)")
+    bindings: dict[str, dict[str, Any]] | None = Field(
+        default=None, description="knob -> {candidate_id, claim_ids, note}"
+    )
+    candidate_ids: list[str] | None = Field(default=None, description="research candidates used")
+    notes: str | None = Field(default=None, max_length=5000)
+
+
+class ReasonBody(BaseModel):
+    """A person's reason for adopting or rejecting a design."""
+
+    rationale: str = Field(min_length=1, max_length=5000)
+
+
+class FiguresBody(BaseModel):
+    """Knob values to draw the paper figures for."""
+
+    values: dict[str, Any] = Field(default_factory=dict)
+    circuits: list[str] | None = None
 
 
 def create_app(cfg: Settings | None = None, **kw: Any) -> Any:
@@ -203,6 +239,69 @@ def create_app(cfg: Settings | None = None, **kw: Any) -> Any:
     async def explore_papers(key: int, sense: str, sort: str = "cited", page: int = 1) -> Any:
         """Papers on one sense of the taxon (sort: cited | recent), 25 a page."""
         return await outside(ex.papers(key, sense, sort, page))
+
+    store = designs.Designs(cfg, designs.Research(cfg, kw.get("research_transport")))
+    app.state.designs = store
+
+    def design_op(fn: Any, *a: Any) -> Any:
+        try:
+            return fn(*a)
+        except designs.DesignError as e:
+            raise HTTPException(e.status, str(e)) from e
+        except studio.NotFound as e:
+            raise HTTPException(404, str(e)) from e
+
+    def who(request: Request) -> str:
+        return user_of(request.headers.get("authorization"))
+
+    @app.get("/api/studio/{clade}/{sense}/design", response_model=models.DesignPageOut)
+    def design_page(clade: str, sense: str, request: Request) -> Any:
+        """Circuit types and knobs for this sense, research's candidates, and the designs."""
+        return design_op(designs.page, snap(), store, clade, sense, who(request))
+
+    @app.post(
+        "/api/studio/{clade}/{sense}/designs", status_code=201, response_model=models.DesignOut
+    )
+    def design_new(clade: str, sense: str, body: DesignBody, request: Request) -> Any:
+        """Start a design (draft); research hears which candidates it uses."""
+        c, s = guarded(snap().sense, clade, sense)
+        return design_op(store.create, c.key, s.id, body.model_dump(), who(request))
+
+    @app.get("/api/studio/designs/{did}", response_model=models.DesignOut)
+    def design_get(did: str) -> Any:
+        return design_op(store.get, did)
+
+    @app.put("/api/studio/designs/{did}", response_model=models.DesignOut)
+    def design_edit(did: str, body: DesignBody, request: Request) -> Any:
+        """Edit values, bindings, title or profile; the design goes back to draft."""
+        return design_op(store.update, did, body.model_dump(), who(request))
+
+    @app.post("/api/studio/designs/{did}/check", response_model=models.DesignOut)
+    def design_check(did: str, request: Request) -> Any:
+        """Validate the values and rerun every touched circuit's paper figure."""
+        return design_op(store.check, did, who(request))
+
+    @app.post("/api/studio/designs/{did}/adopt", response_model=models.DesignOut)
+    def design_adopt(did: str, body: ReasonBody, request: Request) -> Any:
+        """Adopt a validated design: the profile spec patch, and research is told."""
+        return design_op(store.adopt, snap(), did, body.rationale, who(request))
+
+    @app.post("/api/studio/designs/{did}/reject", response_model=models.DesignOut)
+    def design_reject(did: str, body: ReasonBody, request: Request) -> Any:
+        return design_op(store.reject, did, body.rationale, who(request))
+
+    @app.get("/api/studio/designs/{did}/patch", response_class=PlainTextResponse)
+    def design_patch(did: str) -> PlainTextResponse:
+        """The adopted design's profile spec diff (open it as a profiles PR)."""
+        text = design_op(store.patch_text, did)
+        return PlainTextResponse(
+            text, headers={"Content-Disposition": f'attachment; filename="{did}.patch"'}
+        )
+
+    @app.post("/api/studio/design/figures", response_model=models.FiguresOut)
+    def design_figures(body: FiguresBody) -> Any:
+        """The paper figures for these knob values (senseai-circuits figures)."""
+        return design_op(store.figures, body.values, body.circuits)
 
     add_research_routes(app, cfg, kw.get("research_transport"))
 

@@ -4,7 +4,7 @@
 // The application shell: top bar (brand, breadcrumbs, search, provenance and theme toggles,
 // help), the sidebar index of every species and sense, and the main column. Keyboard:
 //   /  search      p  show provenance      t  light/dark      ?  shortcuts
-//   1–6 workspace tabs      Esc  close search
+//   1–7 workspace tabs      Esc  close search
 
 import { api, type Species } from "./api.ts";
 import { el } from "./dom.ts";
@@ -241,7 +241,7 @@ export async function shell(root: HTMLElement, crumbs: [string, string | null][]
     } else if (e.key === "?") dialog.showModal();
     else if (e.key === "p") toggleProv(prov);
     else if (e.key === "t") toggleTheme();
-    else if (/^[1-6]$/.test(e.key)) document.querySelectorAll<HTMLAnchorElement>(".tabs a")[Number(e.key) - 1]?.click();
+    else if (/^[1-7]$/.test(e.key)) document.querySelectorAll<HTMLAnchorElement>(".tabs a")[Number(e.key) - 1]?.click();
   });
   return { main, page };
 }

@@ -181,3 +181,44 @@ class ExplorePapersOut(Envelope):
     total: int
     papers: list[Open]
     years: list[Open]
+
+
+class DesignOut(Open):
+    """A circuit design (senseai-circuits design@1 plus Studio's record of the people's side)."""
+
+    id: str
+    title: str
+    clade: str
+    sense: str
+    profile: str | None
+    values: dict[str, Any]
+    bindings: dict[str, Any]
+    candidate_ids: list[str]
+    status: str = Field(description="draft | validated | adopted | rejected")
+    check: dict[str, Any] | None = Field(description="the last senseai-circuits design check")
+    adoption: dict[str, Any] | None
+    research_sync: list[dict[str, Any]] = Field(description="decisions sent to research")
+    history: list[dict[str, Any]]
+
+
+class DesignPageOut(Envelope):
+    """``GET /api/studio/{clade}/{sense}/design``."""
+
+    clade: str
+    sense: str
+    modality: str
+    circuits: dict[str, Any]
+    circuit_types: list[dict[str, Any]]
+    measures: list[dict[str, Any]]
+    knobs: list[dict[str, Any]]
+    profiles: list[dict[str, Any]]
+    research: dict[str, Any]
+    candidates: list[dict[str, Any]] = Field(description="research's circuit candidates, ranked")
+    designs: list[DesignOut]
+
+
+class FiguresOut(Open):
+    """``POST /api/studio/design/figures``: senseai-circuits figures."""
+
+    ok: bool
+    figures: list[dict[str, Any]]

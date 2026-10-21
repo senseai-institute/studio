@@ -14,8 +14,8 @@ against, and what each one contributes.
 | ingest | `60e6381e1e580c16f8f50653e9baf041bad91c9d` | the DSEC folder layout `testing.make_dsec_fixture` writes, and `SyntheticReplay` (through the SDK's `synthetic` adapter) |
 | tokens, reflex | `7b12b1e`, `9442c53` | only through the SDK |
 | viewer | `8106abffd6c168386dca3dd2d5eef30796010d17` | design tokens (`web/src/theme.css`, copied), Basic auth and the SSE tail (ported into `auth.py` and `runs.tail_events`), the shape of the Run page's live view |
-| research | `63b483cd61156d353248301542afaf8297634a6b` | `docs/SPEC.md` §8/§10: `/api/research/*` behind a proxy that adds `X-SenseAI-User` |
-| circuits | P1 branch `claude/new-session-fhne7e` @ `dd913aff7b692fb27ae8744b22f28eaf6d5f9308` (main is still empty) | `senseai-circuits knobs --json`: the knob registry (`name, unit, default, range, kind, source, doc`). Species values come from a spec's `circuits:` section or a prior bundle's `circuits` / `meta.circuits` (what `CircuitParams.from_bundle_meta` reads). Without the CLI: "circuits: not installed" |
+| research | `63b483cd61156d353248301542afaf8297634a6b`; Design tab: branch `claude/circuit-candidates` @ `b008f12` | `docs/SPEC.md` §8/§10: `/api/research/*` behind a proxy that adds `X-SenseAI-User`. Design tab: `GET /api/research/circuit-candidates[/{id}]`, `POST .../refresh` and `POST .../{id}/decision` (SPEC "Circuit candidates") |
+| circuits | branch `claude/new-session-fhne7e` @ `bb975d2` (main is still empty) | `senseai-circuits knobs --json`: the knob registry (`name, unit, default, range, kind, source, doc`). Species values come from a spec's `circuits:` section or a prior bundle's `circuits` / `meta.circuits` (what `CircuitParams.from_bundle_meta` reads). `prior --library`, the token-space prior. Design tab: `catalogue --json`, `figures --values`, `design check -` and `design patch - --spec --name` (circuits docs/DESIGN.md, "From research to a prior"). Without the CLI: "circuits: not installed" |
 
 ## Assumed formats (until the upstream change lands)
 

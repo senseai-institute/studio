@@ -137,6 +137,19 @@ export interface Service {
   vars: KeyVar[];
   checkable: boolean;
 }
+export interface CandidateClaim {
+  claim_id: string;
+  library_path: string;
+  value: string;
+  status: string;
+  species: string | null;
+  conditions: string | null;
+  method: string | null;
+  sources: SourceInfo[];
+  passage: Passage | null;
+}
+export interface CandidateDetail { id: string; claims: CandidateClaim[]; mechanism: string }
+
 export interface SettingsPage { groups: string[]; integrations: Service[]; where: string }
 export interface KeyCheck { id: string; ok: boolean; detail: string; cached: boolean }
 
@@ -183,6 +196,10 @@ export const research = {
   impact: (id: string) => call<Impact>(`impact/${q(id)}`),
   experiment: (id: string) => call<ExperimentView>(`experiments/${q(id)}`),
   settings: () => call<SettingsPage>("settings"),
+  /** One circuit candidate with its claims and passages (Design tab). */
+  candidate: (id: string) => call<CandidateDetail>(`circuit-candidates/${q(id)}`),
+  /** Re-score every claim (research runs senseai-circuits assess). */
+  refreshCandidates: () => call<{ stored: number; skipped: number; circuits: string }>("circuit-candidates/refresh", post({})),
   checkKey: (id: string) => call<KeyCheck>(`settings/${q(id)}/check`, post()),
   decide: (actionId: string, decision: "approve" | "reject", rationale: string) =>
     call<{ message: string; action: ActionPayload }>(`actions/${q(actionId)}/${decision}`, post({ rationale })),

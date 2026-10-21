@@ -287,6 +287,104 @@ export interface ExplorePapers extends WithProv {
   years: { year: number; count: number }[];
 }
 
+// ---------------------------------------------------------------- Design tab (circuit designs)
+
+/** research's CircuitCandidate (research docs/API.md, /api/research/circuit-candidates). */
+export interface Circuitability {
+  level: "knob" | "circuit" | "new" | "none";
+  circuit: string | null;
+  knob: string | null;
+  value: number | boolean | null;
+  default?: number | boolean | null;
+  score: number;
+  priority: number;
+  checks: { name: string; ok: boolean | null; detail: string }[];
+  summary: string;
+  measure?: { formula: string; mapping: string } | null;
+}
+export interface CandidateRow {
+  id: string;
+  clade: string;
+  sense: string;
+  library_path: string;
+  evidence_clade: string;
+  claim_ids: string[];
+  mechanism: string;
+  likelihood: number;
+  quality: number;
+  priority: number | null;
+  score_parts: Record<string, Record<string, { value?: unknown; weight?: number; measured_in?: string | null } | boolean>>;
+  circuitability: Circuitability | null;
+  circuits_version: string | null;
+  circuits_note: string;
+  status: string;
+  design_ids: string[];
+}
+export interface FigureSeries { name: string; style: string; points: [number, number][] }
+export interface Figure {
+  circuit: string;
+  figure: boolean;
+  ok: boolean;
+  title?: string;
+  paper?: string;
+  note?: string;
+  x?: { label: string; unit: string; scale?: string };
+  y?: { label: string; unit: string };
+  series?: FigureSeries[];
+  checks: { name: string; ok: boolean | null; detail: string }[];
+}
+export interface DesignCheck {
+  ok: boolean;
+  status: string;
+  figures: Figure[];
+  checks: { name: string; ok: boolean | null; detail: string }[];
+  changed: { knob: string; value: unknown; default: unknown; bound: boolean }[];
+  at?: string;
+}
+export interface Binding { candidate_id?: string; claim_ids?: string[]; note?: string }
+export interface Design {
+  id: string;
+  title: string;
+  clade: string;
+  sense: string;
+  profile: string | null;
+  values: Record<string, number | boolean>;
+  bindings: Record<string, Binding>;
+  candidate_ids: string[];
+  status: "draft" | "validated" | "adopted" | "rejected";
+  check: DesignCheck | null;
+  adoption: { by: string; at: string; rationale: string; spec_file: string; patch: string; diff: string } | null;
+  research_sync: { candidate_id: string; status: string; ok: boolean; error: string | null }[];
+  history: { at: string; by: string; event: string; note: string }[];
+  updated_at?: string;
+}
+export interface DesignPage extends WithProv {
+  clade: string;
+  sense: string;
+  modality: string;
+  circuits: { installed: boolean; ok: boolean; error: string | null; version: string | null };
+  circuit_types: { prefix: string; name: string; computes: string; papers: string; figure: boolean; conserved: string; knobs: string[] }[];
+  measures: { knob: string; field: string; unit: string; mapping: string; formula: string }[];
+  knobs: Knob[];
+  profiles: { name: string; source_file: string; circuits: Record<string, number | boolean> }[];
+  research: { configured: boolean; ok: boolean; error: string | null; scored_with: string[]; stale: boolean };
+  candidates: CandidateRow[];
+  designs: Design[];
+}
+export interface DesignBody {
+  title?: string;
+  profile?: string | null;
+  values?: Record<string, number | boolean>;
+  bindings?: Record<string, Binding>;
+  candidate_ids?: string[];
+}
+
+async function send<T>(method: string, url: string, body?: unknown): Promise<T> {
+  const r = await fetch(url, { method, headers: { "Content-Type": "application/json", Accept: "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (!r.ok) throw new Error(await errorText(r));
+  return (await r.json()) as T;
+}
+
 async function get<T>(url: string): Promise<T> {
   const r = await fetch(url, { headers: { Accept: "application/json" } });
   if (!r.ok) throw new Error(await errorText(r));
@@ -326,6 +424,13 @@ export const api = {
     if (!r.ok) throw new Error(await errorText(r));
     return (await r.json()) as Job;
   },
+  designPage: (c: string, s: string) => get<DesignPage>(`${base(c, s)}/design`),
+  createDesign: (c: string, s: string, body: DesignBody) => send<Design>("POST", `${base(c, s)}/designs`, body),
+  updateDesign: (id: string, body: DesignBody) => send<Design>("PUT", `/api/studio/designs/${encodeURIComponent(id)}`, body),
+  checkDesign: (id: string) => send<Design>("POST", `/api/studio/designs/${encodeURIComponent(id)}/check`),
+  adoptDesign: (id: string, rationale: string) => send<Design>("POST", `/api/studio/designs/${encodeURIComponent(id)}/adopt`, { rationale }),
+  rejectDesign: (id: string, rationale: string) => send<Design>("POST", `/api/studio/designs/${encodeURIComponent(id)}/reject`, { rationale }),
+  figures: (values: Record<string, number | boolean>, circuits?: string[]) => send<{ ok: boolean; figures: Figure[] }>("POST", "/api/studio/design/figures", { values, circuits }),
   async cancel(id: string): Promise<Job> {
     const r = await fetch(`/api/studio/jobs/${encodeURIComponent(id)}/cancel`, { method: "POST" });
     if (!r.ok) throw new Error(await errorText(r));

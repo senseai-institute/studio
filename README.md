@@ -38,9 +38,10 @@ Two rules shape Studio:
 
 | | |
 |---|---|
-| **Atlas** (`/studio`) | Totals across the library, then a species × modality matrix. Each cell is a sense: *modelled* (a profile reads it, from `research.consumers_by_path`), *described* (cited values, no profile) or *empty*, with its counts of values, sources and open questions and a ten-step progress bar. A sidebar index, search (`/`), a provenance toggle (`p`), light/dark (`t`) and tab keys (`1`–`6`) work on every page. |
+| **Atlas** (`/studio`) | Totals across the library, then a species × modality matrix. Each cell is a sense: *modelled* (a profile reads it, from `research.consumers_by_path`), *described* (cited values, no profile) or *empty*, with its counts of values, sources and open questions and a ten-step progress bar. A sidebar index, search (`/`), a provenance toggle (`p`), light/dark (`t`) and tab keys (`1`–`7`) work on every page. |
 | **Sources** | A table of every value of the sense (value, unit, species, confidence, verification) with numbered references. Rows expand to conditions, notes, the verbatim quote and the model parameters that read the value. Below: open questions and research requests, then the bibliography from `CITATIONS.md` (DOI, how much was read, copy reference). |
 | **Model** | *Fig. 1* traces every cited value to the rules and model parameters it sets. *Circuits*: the senseai-circuits knob registry, grouped by circuit (only those serving this modality), each knob's species value or "circuit default", range, kind (measured / proposed / physics) and basis; plus the rulebook. *Profile rules*: each head/reflex field, the rule that sets it, the library path it reads, the computed value. *World prior*: `PriorParams.from_library(<clade>.yaml).provenance()`, measured / proposed / physics, from `senseai-circuits prior --library` (the prior's home since world re-exports it from senseai-circuits), else from an older world checkout's `prior/params.py`. *Learned networks*: checkpoints (params, model id, tokenizer, training data) or "untrained". *Reflex*: commit threshold per profile. |
+| **Design** | Turns research's circuit candidates into the circuit prior learned models train on (below, *The Design tab*). §1 candidates ranked by priority = likelihood × quality × circuitability; §2 the claims, passages and score factors behind one; §3 a design: knob values for a profile, each bound to its claims or marked *set by hand*, with each touched circuit's paper figure redrawn live for those values, *Check against the papers*, then *Adopt* with a reason; §4 the designs of this sense. |
 | **Run** | Pick a data source (a DSEC recording under `SENSEAI_DATA_ROOT`, or *synthetic*) and arms (each profile that reads the sense on the structured prior; the control profile; learned arms only with a checkpoint), then press Run. While it runs: the latest frame with the bearing ring, global surprise per arm, the reflex state, latency p99, and fires as they happen. Afterwards: the side-by-side and the replay report. Banners: *synthetic*, *not pre-registered*, *structured prior*. Links the frozen pre-registration and its verdict when bench has one. |
 | **Pipeline** | The ten steps (`content/pipeline.yaml`, or profiles' `docs/pipeline/steps.yaml`) as a checklist with dates and evidence, and the clock: days since step 1, *partial* when steps were done out of order. |
 | **Use cases** | `content/use_cases/<niche>.<sense>.md`, rendered, with the pipeline step beside every claim. |
@@ -130,6 +131,32 @@ Set these service variables:
 Railway sets `PORT` itself. The clone is refreshed on each deploy or restart. Without a bench
 stack in the container, every screen except Run works, and Run says why it cannot.
 
+## The Design tab (research → circuits → a profile's circuit prior)
+
+Research scores every library value as a *circuit candidate*: `likelihood` (that the
+measurement applies to this species: species distance, disputes) and `quality` (of the
+evidence: claim status, confidence, method, how much of the paper was read). senseai-circuits
+adds *circuitability*: does the value set an existing knob (unit converted, in range), fit an
+existing circuit without a knob for it, or need a new circuit? A person then designs:
+
+1. Pick a candidate; read its claims and the factors behind its scores.
+2. *Use the selected candidate*: its converted value fills the knob, bound to its claims. Any
+   knob can also be set by hand; the design shows which values have no claim behind them.
+3. Each circuit the design touches has its paper figure redrawn for the design's values as
+   you type (area summation for the retina, temporal-frequency tuning for the motion
+   detector, looming vs translation for the LGMD), with the paper's model beside it.
+4. *Check against the papers* (`senseai-circuits design check`): validated only when every
+   figure still reproduces its paper.
+5. *Adopt*, with a reason: `senseai-circuits design patch` writes the design into the profile
+   spec's `circuits:` block. Studio keeps the diff to download (it never writes the profiles
+   checkout); open it as a profiles PR. The SDK reads that block (`CircuitParams.from_profile`),
+   and learned models train on top of it.
+
+Research hears each step (`in_design`, `adopted`, or back to `open` on rejection) through
+`POST /api/research/circuit-candidates/{id}/decision`, with the person's name. Designs live in
+`STUDIO_DATA/designs/` (one JSON file each, `history.jsonl` for every change). Without
+`RESEARCH_URL` the tab still works for designing by hand; without senseai-circuits it says so.
+
 ## API
 
 OpenAPI is at `/api/studio/openapi.json` (snapshot: [`docs/openapi.json`](docs/openapi.json)).
@@ -144,6 +171,14 @@ GET  /api/studio/{clade}/{sense}/use-cases       rendered markdown + front matte
 GET  /api/studio/{clade}/{sense}/run/options     data sources, arms (with disabled reasons), prereg
 POST /api/studio/{clade}/{sense}/run             {source, arms, seconds} -> job
 GET  /api/studio/jobs/{id}/events                SSE: bench's live events contract
+GET  /api/studio/{clade}/{sense}/design          circuit types, knobs, profiles, research candidates, designs
+POST /api/studio/{clade}/{sense}/designs         new design -> draft (research: candidates in_design)
+PUT  /api/studio/designs/{id}                    edit values, bindings, profile (back to draft)
+POST /api/studio/designs/{id}/check              senseai-circuits design check -> validated | draft
+POST /api/studio/designs/{id}/adopt              {rationale} -> profile spec patch; research: adopted
+POST /api/studio/designs/{id}/reject             {rationale}; research: candidates back to open
+GET  /api/studio/designs/{id}/patch              the adopted design's profile spec diff
+POST /api/studio/design/figures                  {values, circuits} -> the paper figures (live preview)
 GET  /api/studio/health                          repos found, SHAs, circuits/research installed, data root
 GET  /api/studio/explore/species?q=              any taxon by name (GBIF), with its library entry
 GET  /api/studio/explore/taxon/{key}             its senses, ranked by paper count (OpenAlex)

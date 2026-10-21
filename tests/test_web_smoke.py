@@ -282,3 +282,51 @@ def test_explore_any_species(cfg: Settings, research_server: str, page: Any) -> 
     finally:
         srv.should_exit = True
         t.join(5)
+
+
+def test_design_tab_end_to_end(cfg: Settings, research_server: str, page: Any) -> None:
+    """Research candidate → evidence → knob value → live figure → check → adopt → profile patch."""
+    import sys
+
+    from tests.fake_research import CANDIDATE, TOKEN
+
+    fake = f"{sys.executable} {Path(__file__).parent / 'fake_circuits.py'}"
+    c = replace(cfg, research_url=research_server, research_token=TOKEN, circuits_cmd=fake)
+    port = _port()
+    srv = uvicorn.Server(
+        uvicorn.Config(create_app(c), host="127.0.0.1", port=port, log_level="warning")
+    )
+    t = threading.Thread(target=srv.run, daemon=True)
+    t.start()
+    for _ in range(100):
+        if srv.started:
+            break
+        time.sleep(0.05)
+    try:
+        pg = page
+        pg.goto(f"http://127.0.0.1:{port}/studio/felidae/vision/design")
+        row = pg.locator(f'tr[data-candidate="{CANDIDATE}"]')
+        row.wait_for()
+        assert "KNOB" in row.inner_text().upper() and "cs.sigma_center_deg" in row.inner_text()
+        row.click()
+        pg.wait_for_selector(".claim-card")
+        assert "centre radius of 0.8 deg" in pg.locator(".claim-card").inner_text()
+        pg.click('[data-testid="use-candidate"]')
+        assert pg.locator('input[data-knob="cs.sigma_center_deg"]').input_value() == "0.57"
+        pg.wait_for_selector('[data-testid="design-figures"] figure[data-circuit="cs"]')
+        assert (
+            "REPRODUCES THE PAPER"
+            in pg.locator('[data-testid="design-figures"]').inner_text().upper()
+        )
+        pg.click('[data-testid="check-design"]')
+        pg.wait_for_selector('[data-testid="adopt-design"]')
+        assert "VALIDATED" in pg.locator(".tab-body").inner_text().upper()
+        pg.fill("textarea", "Rodieck's centre radius for cat X cells.")
+        pg.click('[data-testid="adopt-design"]')
+        pg.wait_for_selector("pre.diff")
+        assert "cs.sigma_center_deg: 0.57" in pg.locator("pre.diff").inner_text()
+        assert pg.locator('a.btn[href$="/patch"]').count() == 1
+        pg.wait_for_selector("tr[data-design]")
+    finally:
+        srv.should_exit = True
+        t.join(5)
