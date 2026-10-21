@@ -46,6 +46,7 @@ from senseai_studio import __version__, explore, models, runs, studio
 from senseai_studio.auth import BasicAuth
 from senseai_studio.facts import upstream
 from senseai_studio.research import add_research_routes
+from senseai_studio.research import check as research_check
 from senseai_studio.settings import PACKAGE_DIR, Settings
 
 STATIC = PACKAGE_DIR / "static"
@@ -92,8 +93,10 @@ def create_app(cfg: Settings | None = None, **kw: Any) -> Any:
         return {"ok": True}
 
     @app.get("/api/studio/health", response_model=models.HealthOut)
-    def health(refresh: bool = False) -> Any:
-        return studio.health(snap(refresh))
+    async def health(refresh: bool = False) -> Any:
+        out = studio.health(snap(refresh))
+        out["research"]["reachable"] = await research_check(cfg, kw.get("research_transport"))
+        return out
 
     @app.get("/api/studio/species", response_model=models.SpeciesOut)
     def species(refresh: bool = False) -> Any:

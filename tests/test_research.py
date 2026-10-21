@@ -101,3 +101,31 @@ def test_no_token_header_without_a_token(cfg: Settings) -> None:
         "/api/studio/research/health", headers={"X-SenseAI-Proxy-Token": "from-browser"}
     )
     assert "x-senseai-proxy-token" not in SEEN[0].headers
+
+
+def test_health_says_whether_research_lets_studio_in(cfg: Settings, monkeypatch: object) -> None:
+    def gate(request: httpx.Request) -> httpx.Response:
+        ok = request.headers.get("x-senseai-proxy-token") == "s3cret"
+        return httpx.Response(200 if ok else 403, json={"detail": "front end only"})
+
+    def health(**kw: object) -> dict[str, object]:
+        c = TestClient(create_app(with_(cfg, **kw), research_transport=httpx.MockTransport(gate)))
+        return c.get("/api/studio/health").json()["research"]  # type: ignore[no-any-return]
+
+    url = "http://research.internal:8100"
+    assert health()["reachable"] is None
+    assert health(research_url=url, research_token="s3cret")["reachable"] == "ok"
+    assert "no RESEARCH_PROXY_TOKEN" in health(research_url=url)["reachable"]
+    wrong = health(research_url=url, research_token="s3cret ")["reachable"]
+    assert "differs" in wrong and "7 characters" in wrong
+
+
+def test_pasted_values_are_cleaned(monkeypatch: object) -> None:
+    import pytest
+
+    mp: pytest.MonkeyPatch = monkeypatch  # type: ignore[assignment]
+    mp.setenv("RESEARCH_URL", ' "http://research.internal:8100/" ')
+    mp.setenv("RESEARCH_PROXY_TOKEN", "'s3cret'\n")
+    s = Settings.from_env()
+    assert s.research_url == "http://research.internal:8100"
+    assert s.research_token == "s3cret"

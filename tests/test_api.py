@@ -145,7 +145,7 @@ def test_health(client: TestClient) -> None:
     body = client.get("/api/studio/health").json()
     assert body["ok"] and body["clades"] == 2
     assert body["repos"]["profiles"]["found"]
-    assert body["research"] == {"configured": False, "url": None, "token": False}
+    assert body["research"] == {"configured": False, "url": None, "token": False, "reachable": None}
     assert body["bench"]["features"]["synthetic"]
 
 

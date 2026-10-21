@@ -39,6 +39,30 @@ HOP = {
 OURS = {"x-senseai-user", "x-senseai-proxy-token"}  # set here only, never taken from the browser
 
 
+async def check(cfg: Settings, transport: httpx.AsyncBaseTransport | None = None) -> str | None:
+    """Can Studio get into research? ``ok``, or what is wrong, in words; None when unset."""
+    if not cfg.research_url:
+        return None
+    headers = {"X-SenseAI-User": "studio-health"}
+    if cfg.research_token:
+        headers["X-SenseAI-Proxy-Token"] = cfg.research_token
+    try:
+        async with httpx.AsyncClient(transport=transport, timeout=5) as c:
+            r = await c.get(f"{cfg.research_url}/api/research/health", headers=headers)
+    except httpx.HTTPError as e:
+        return f"unreachable at {cfg.research_url}: {type(e).__name__}: {e}"
+    if r.status_code == 403:
+        if not cfg.research_token:
+            return "refused: Studio has no RESEARCH_PROXY_TOKEN"
+        return (
+            f"refused: RESEARCH_PROXY_TOKEN differs from research's "
+            f"(Studio's is {len(cfg.research_token)} characters long)"
+        )
+    if r.status_code >= 400:
+        return f"research answered {r.status_code}"
+    return "ok"
+
+
 def add_research_routes(
     app: FastAPI, cfg: Settings, transport: httpx.AsyncBaseTransport | None = None
 ) -> None:

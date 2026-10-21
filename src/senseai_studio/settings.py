@@ -22,6 +22,14 @@ def _path(name: str) -> Path | None:
     return Path(v).expanduser() if v else None
 
 
+def _clean(v: str | None) -> str | None:
+    """A pasted value without the spaces or quotes that come with it: ``" 'abc' "`` -> ``abc``."""
+    v = (v or "").strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in "'\"":
+        v = v[1:-1].strip()
+    return v or None
+
+
 def default_content() -> Path:
     """``content/`` of this checkout, else ``./content``."""
     here = REPO_DIR / "content"
@@ -79,8 +87,8 @@ class Settings:
             world_repo=_path("SENSEAI_WORLD_REPO"),
             artefacts=_path("SENSEAI_ARTEFACTS"),
             circuits_cmd=os.environ.get("SENSEAI_CIRCUITS_CMD") or "senseai-circuits",
-            research_url=(os.environ.get("RESEARCH_URL") or "").rstrip("/") or None,
-            research_token=os.environ.get("RESEARCH_PROXY_TOKEN") or None,
+            research_url=(_clean(os.environ.get("RESEARCH_URL")) or "").rstrip("/") or None,
+            research_token=_clean(os.environ.get("RESEARCH_PROXY_TOKEN")),
             content=_path("STUDIO_CONTENT") or default_content(),
             data_dir=_path("STUDIO_DATA") or Path("data"),
             password=os.environ.get("VIEWER_PASSWORD") or None,
