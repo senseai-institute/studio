@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -228,3 +229,58 @@ def test_species_totals(client: TestClient) -> None:
     assert set(body["modalities"]) == {"vision", "hearing", "touch"}
     cat = body["cards"][0]["senses"][0]
     assert cat["values"] == 6 and cat["sources"] >= 4
+
+
+def test_world_prior_comes_from_circuits_when_installed(cfg: Settings) -> None:
+    import sys
+
+    from tests.conftest import FIXTURES
+
+    fake = f"{sys.executable} {FIXTURES.parent / 'fake_circuits.py'}"
+    c = TestClient(create_app(with_(cfg, circuits_cmd=fake)))
+    body = c.get("/api/studio/felidae/vision/model").json()
+    wp = body["world_prior"]
+    assert wp["ok"], wp
+    by_name = {x["name"]: x for x in wp["params"]}
+    assert (
+        by_name["sigma_bearing_deg"]["kind"] == "measured"
+        and by_name["w_loom"]["kind"] == "proposed"
+    )
+    assert body["provenance"] and any(
+        pv["source_file"] == f"cli:{fake} prior"
+        for pv in body["provenance"]
+        if pv["field"].startswith("world_prior/params")
+    )
+    assert_provenance(body)
+
+
+def test_world_prior_falls_back_to_world_params_file(cfg: Settings, tmp_path: Path) -> None:
+    """No circuits CLI: an old world's own params.py works; a re-exporting one names the gap."""
+    import shutil
+
+    world = tmp_path / "world"
+    params = world / "src/senseai_world/prior"
+    params.mkdir(parents=True)
+    old = tmp_path / "old_params.py"
+    old.write_text(
+        "from dataclasses import dataclass, field, fields\n"
+        "@dataclass(frozen=True)\nclass Param:\n    value: float\n    kind: str\n    source: str\n"
+        "@dataclass(frozen=True)\nclass PriorParams:\n"
+        "    match_gate: Param = field(\n"
+        "        default_factory=lambda: Param(9.0, 'physics', '3-sigma gate'))\n"
+        "    def provenance(self):\n"
+        "        return {f.name: vars(getattr(self, f.name)) for f in fields(self)}\n"
+        "    def proposed(self):\n        return []\n"
+        "    @classmethod\n    def from_library(cls, path):\n        return cls()\n"
+    )
+    shutil.copy(old, params / "params.py")
+    c = TestClient(create_app(with_(cfg, world_repo=world)))
+    wp = c.get("/api/studio/felidae/vision/model").json()["world_prior"]
+    assert wp["ok"] and [x["name"] for x in wp["params"]] == ["match_gate"]
+    # a world that re-exports from senseai-circuits, with circuits missing here
+    (params / "params.py").write_text(
+        "from senseai_circuits.tokenspace import Kind, Param, PriorParams\n"
+    )
+    c = TestClient(create_app(with_(cfg, world_repo=world)))
+    wp = c.get("/api/studio/felidae/vision/model").json()["world_prior"]
+    assert not wp["ok"] and "install senseai-circuits" in wp["error"]

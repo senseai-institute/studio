@@ -450,7 +450,7 @@ def model(snap: Snapshot, clade: str, sense: str) -> dict[str, Any]:
     for i, prm in enumerate(params):
         p.add(
             f"world_prior/params/{i}",
-            "world/src/senseai_world/prior/params.py",
+            str(wp.get("source_label") or "world/src/senseai_world/prior/params.py"),
             f"PriorParams.{prm['name']}",
         )
     p.add("world_prior/library", lab := c.doc.label, 1)
