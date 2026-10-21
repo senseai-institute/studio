@@ -5,6 +5,7 @@
 //   /studio/explore?q=leopard        taxa with that name (GBIF)
 //   /studio/explore/{key}            the taxon's senses, ranked by how many papers cover each
 //   /studio/explore/{key}/{sense}    those papers, and the research assistant's summary
+//   /studio/explore/{key}/search?q=  the same for any sense or trait typed in
 // Names and papers come from /api/studio/explore/*; the summary from the research service.
 
 import { api, type ExplorePapers, type LibraryLink, type Paper, type SenseHits, type Taxon } from "../api.ts";
@@ -35,6 +36,25 @@ export function speciesSearch(value = ""): HTMLFormElement {
   input.placeholder = "Any animal: leopard, barn owl, Octopus vulgaris…";
   input.setAttribute("aria-label", "Search any species");
   const go = el("button", "btn primary", "Search");
+  go.type = "submit";
+  f.append(input, go);
+  return f;
+}
+
+/** "Search a sense" on a taxon: any words, commas between alternatives. */
+function senseSearch(key: number, value = ""): HTMLFormElement {
+  const f = el("form", "explore-search sense-search");
+  f.action = `/studio/explore/${key}/search`;
+  f.method = "get";
+  f.setAttribute("role", "search");
+  const input = el("input");
+  input.name = "q";
+  input.type = "search";
+  input.required = true;
+  input.value = value;
+  input.placeholder = "Any sense or trait: colour vision, whiskers, lateral line…";
+  input.setAttribute("aria-label", "Search a sense or trait in this animal");
+  const go = el("button", "btn", "Search papers");
   go.type = "submit";
   f.append(input, go);
   return f;
@@ -133,6 +153,10 @@ async function taxonPage(root: HTMLElement, key: number): Promise<void> {
     holder.replaceChildren(header(`${t.rank ?? "taxon"} · ${lineage(t)}`, titleOf(t), "Each sense, ranked by how many papers name this animal and the sense in their title or abstract. Open one to read them."));
     const lib = libraryNote(t.library);
     if (lib) holder.append(lib);
+    const own = section("", "Search a sense");
+    own.tools.append(el("span", "faint small", "commas between alternatives: cone, colour vision"));
+    own.body.append(senseSearch(key));
+    holder.append(own.box);
     const found = res.senses.filter((s) => s.count);
     const none = res.senses.filter((s) => !s.count);
     const max = Math.max(1, ...found.map((s) => s.count ?? 0));
@@ -220,7 +244,7 @@ function assistant(t: Taxon, sense: ExplorePapers["sense"]): HTMLElement {
   const focus = t.library && sense.library ? { library_path: `${t.library.clade}.senses.${sense.library.id}` } : null;
   const who = t.common_names[0] ? `${t.scientific_name} (${t.common_names[0]})` : t.scientific_name;
   const prompt = `What does the published research say about ${sense.label.toLowerCase()} in ${who}? Search the literature, then summarise the main findings, with numbers where papers report them and the paper each one comes from. End with what is still unknown.`;
-  const key = `explore:conversation:${t.key}:${sense.id}`;
+  const key = `explore:conversation:${t.key}:${sense.id ?? `q:${sense.terms.join(",")}`}`;
   let reply: HTMLElement | null = null;
   const chips = new Map<string, HTMLElement>();
 
@@ -295,16 +319,23 @@ function assistant(t: Taxon, sense: ExplorePapers["sense"]): HTMLElement {
   return sec.box;
 }
 
-async function sensePage(root: HTMLElement, key: number, sense: string): Promise<void> {
+async function sensePage(root: HTMLElement, key: number, sense: string | null): Promise<void> {
   const params = new URLSearchParams(location.search);
   const sort = params.get("sort") === "recent" ? "recent" : "cited";
   const pageNo = Math.max(1, Number(params.get("page")) || 1);
-  const { page } = await shell(root, [["Atlas", "/studio"], ["Explore", "/studio/explore"], [String(key), `/studio/explore/${key}`], [sense, null]]);
+  const q = params.get("q")?.trim() ?? "";
+  const href = (s: string, p?: number): string => {
+    const u = new URLSearchParams(q && !sense ? { q } : {});
+    u.set("sort", s);
+    if (p) u.set("page", String(p));
+    return `?${u}`;
+  };
+  const { page } = await shell(root, [["Atlas", "/studio"], ["Explore", "/studio/explore"], [String(key), `/studio/explore/${key}`], [sense ?? `“${q}”`, null]]);
   const holder = el("div", "explore");
   holder.append(el("p", "loading muted", "Collecting the papers…"));
   page.append(holder);
   try {
-    const res = await api.explorePapers(key, sense, sort, pageNo);
+    const res = sense ? await api.explorePapers(key, sense, sort, pageNo) : await api.exploreSearch(key, q, sort, pageNo);
     const t = res.taxon;
     document.title = `${name(t)} · ${res.sense.label} · SenseAI Studio`;
     const crumb = document.querySelectorAll(".crumbs a")[2];
@@ -312,12 +343,13 @@ async function sensePage(root: HTMLElement, key: number, sense: string): Promise
     holder.replaceChildren(header(`${t.rank ?? "taxon"} · ${lineage(t)}`, titleOf(t, res.sense.label)));
     const lib = libraryNote(t.library, res.sense.library);
     if (lib) holder.append(lib);
+    if (!sense) holder.append(senseSearch(key, q));
     holder.append(assistant(t, res.sense));
 
     const sec = section("", "Published research");
     const toggle = el("div", "seg");
     for (const [id, label] of [["cited", "Most cited"], ["recent", "Newest"]] as const) {
-      const a = link(label, `?sort=${id}`);
+      const a = link(label, href(id));
       if (id === res.sort) a.setAttribute("aria-current", "true");
       toggle.append(a);
     }
@@ -332,14 +364,14 @@ async function sensePage(root: HTMLElement, key: number, sense: string): Promise
     const pages = res.pages;
     if (pages > 1) {
       const nav = el("nav", "pager");
-      if (res.page > 1) nav.append(link("← Previous", `?sort=${res.sort}&page=${res.page - 1}`));
+      if (res.page > 1) nav.append(link("← Previous", href(res.sort, res.page - 1)));
       nav.append(el("span", "faint small", `page ${res.page} of ${pages.toLocaleString()}`));
-      if (res.page < pages) nav.append(link("Next →", `?sort=${res.sort}&page=${res.page + 1}`));
+      if (res.page < pages) nav.append(link("Next →", href(res.sort, res.page + 1)));
       sec.body.append(nav);
     }
-    const q = el("p", "faint small");
-    q.append(`${SOURCE[res.source]} query: `, el("code", "mono", res.filter));
-    sec.body.append(q);
+    const used = el("p", "faint small");
+    used.append(`${SOURCE[res.source]} query: `, el("code", "mono", res.filter));
+    sec.body.append(used);
     holder.append(sec.box, inspect(res));
   } catch (e) {
     holder.replaceChildren(errorBox(e));
@@ -350,5 +382,6 @@ export function explorePage(root: HTMLElement, key?: string, sense?: string): Pr
   if (!key) return resultsPage(root, new URLSearchParams(location.search).get("q")?.trim() ?? "");
   const k = Number(key);
   if (!Number.isInteger(k)) return resultsPage(root, key);
+  if (sense === "search") return sensePage(root, k, null);
   return sense ? sensePage(root, k, sense) : taxonPage(root, k);
 }

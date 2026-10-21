@@ -265,6 +265,17 @@ def test_explore_any_species(cfg: Settings, research_server: str, page: Any) -> 
         ]
         assert "412" in rows.first.inner_text() and "modelled" in rows.first.inner_text()
         assert pg.locator(".no-papers summary").count() == 1
+        pg.fill(".sense-search input[name=q]", "retina, colour vision")
+        pg.press(".sense-search input[name=q]", "Enter")
+        pg.wait_for_selector(".paper")
+        assert "/studio/explore/5219436/search?q=" in pg.url
+        assert "retina, colour vision" in pg.locator(".page-title").inner_text()
+        pg.click(".seg a:has-text('Newest')")
+        pg.wait_for_selector(".seg a[aria-current='true']:has-text('Newest')")
+        assert "q=retina" in pg.url, "sorting keeps the typed sense"
+        pg.go_back()
+        pg.go_back()
+        pg.wait_for_selector(".sense-row")
         if shots:
             pg.screenshot(path=f"{shots}/explore-senses.png", full_page=True)
         rows.first.click()

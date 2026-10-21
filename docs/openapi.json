@@ -737,6 +737,75 @@
     }
    }
   },
+  "/api/studio/explore/taxon/{key}/papers": {
+   "get": {
+    "summary": "Explore Search",
+    "description": "Papers on any sense or trait (q: terms separated by commas, any one of which).",
+    "operationId": "explore_search_api_studio_explore_taxon__key__papers_get",
+    "parameters": [
+     {
+      "name": "key",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Key"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Q"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "cited",
+       "title": "Sort"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Page"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ExplorePapersOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/studio/explore/taxon/{key}/{sense}/papers": {
    "get": {
     "summary": "Explore Papers",

@@ -275,7 +275,7 @@ export interface Paper {
 
 export interface ExplorePapers extends WithProv {
   taxon: Taxon;
-  sense: { id: string; label: string; terms: string[]; library: { id: string; state: Chip["state"] } | null };
+  sense: { id: string | null; label: string; terms: string[]; library: { id: string; state: Chip["state"] } | null };
   source: "openalex" | "europepmc";
   filter: string;
   sort: "cited" | "recent";
@@ -310,6 +310,8 @@ export const api = {
   health: () => get<Health>("/api/studio/health"),
   exploreSpecies: (q: string) => get<ExploreSpecies>(`/api/studio/explore/species?q=${encodeURIComponent(q)}`),
   exploreTaxon: (key: number) => get<ExploreTaxon>(`/api/studio/explore/taxon/${key}`),
+  exploreSearch: (key: number, q: string, sort: string, page: number) =>
+    get<ExplorePapers>(`/api/studio/explore/taxon/${key}/papers?q=${encodeURIComponent(q)}&sort=${encodeURIComponent(sort)}&page=${page}`),
   explorePapers: (key: number, sense: string, sort: string, page: number) =>
     get<ExplorePapers>(`/api/studio/explore/taxon/${key}/${encodeURIComponent(sense)}/papers?sort=${encodeURIComponent(sort)}&page=${page}`),
   sources: (c: string, s: string) => get<Sources>(`${base(c, s)}/sources`),

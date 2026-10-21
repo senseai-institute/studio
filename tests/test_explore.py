@@ -113,3 +113,20 @@ def test_openalex_429_falls_back_to_europe_pmc(
     )
     assert first["open_access"] == "https://europepmc.org/article/PMC/PMC0"
     assert first["doi"] == "https://doi.org/10.2000/vision.0"
+
+
+def test_search_any_sense(cfg: Settings) -> None:
+    c = _client(cfg)
+    d = c.get(
+        "/api/studio/explore/taxon/5219436/papers",
+        params={"q": " retina,  colour  vision, Retina "},
+    ).json()
+    assert d["sense"] == {
+        "id": None,
+        "label": "retina,  colour  vision, Retina",
+        "terms": ["retina", "colour vision"],
+        "library": None,
+    }
+    assert d["filter"].endswith('AND (retina OR "colour vision")')
+    assert d["total"] == 412 and len(d["papers"]) == 25
+    assert c.get("/api/studio/explore/taxon/5219436/papers", params={"q": " , "}).status_code == 422

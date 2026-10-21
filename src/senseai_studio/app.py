@@ -20,6 +20,7 @@
     GET  /api/studio/explore/species?q=              any taxon by name (GBIF)
     GET  /api/studio/explore/taxon/{key}             its senses, ranked by papers (OpenAlex)
     GET  /api/studio/explore/taxon/{key}/{sense}/papers  the papers on one sense
+    GET  /api/studio/explore/taxon/{key}/papers?q=   the papers on any sense typed in
     *    /api/studio/research/*                      proxy to RESEARCH_URL (when set)
 
 Every JSON response carries ``provenance``. Studio reads repos read-only.
@@ -184,6 +185,8 @@ def create_app(cfg: Settings | None = None, **kw: Any) -> Any:
             return await coro
         except explore.NotFound as e:
             raise HTTPException(404, str(e)) from e
+        except explore.BadQuery as e:
+            raise HTTPException(422, str(e)) from e
         except explore.ExploreError as e:
             raise HTTPException(502, str(e)) from e
 
@@ -196,6 +199,11 @@ def create_app(cfg: Settings | None = None, **kw: Any) -> Any:
     async def explore_taxon(key: int) -> Any:
         """The taxon's senses, ranked by how many papers cover each."""
         return await outside(ex.taxon(key))
+
+    @app.get("/api/studio/explore/taxon/{key}/papers", response_model=models.ExplorePapersOut)
+    async def explore_search(key: int, q: str, sort: str = "cited", page: int = 1) -> Any:
+        """Papers on any sense or trait (q: terms separated by commas, any one of which)."""
+        return await outside(ex.search_papers(key, q, sort, page))
 
     @app.get(
         "/api/studio/explore/taxon/{key}/{sense}/papers", response_model=models.ExplorePapersOut

@@ -45,7 +45,7 @@ Two rules shape Studio:
 | **Pipeline** | The ten steps (`content/pipeline.yaml`, or profiles' `docs/pipeline/steps.yaml`) as a checklist with dates and evidence, and the clock: days since step 1, *partial* when steps were done out of order. |
 | **Use cases** | `content/use_cases/<niche>.<sense>.md`, rendered, with the pipeline step beside every claim. |
 | **Research** | Only when `RESEARCH_URL` is set: the research service's chat focused on `<clade>.senses.<sense>`, with its approval cards. |
-| **Explore** (`/studio/explore`) | Any animal, whether or not the library has it. Search by common or scientific name (GBIF's backbone taxonomy). A taxon's page ranks its senses by how many papers name the animal and the sense in their title or abstract (OpenAlex; the terms per sense are in `content/senses.yaml`, and each count shows the query it came from). A sense's page lists those papers, most cited or newest, with papers per year, abstracts and free full-text links. If OpenAlex is rate-limiting (429), counts and papers come from Europe PMC instead, and the page says so. When `RESEARCH_URL` is set, *Summarise this research* asks the research assistant for a sourced summary. Links into the workspace when the library covers the taxon. |
+| **Explore** (`/studio/explore`) | Any animal, whether or not the library has it. Search by common or scientific name (GBIF's backbone taxonomy). A taxon's page ranks its senses by how many papers name the animal and the sense in their title or abstract (OpenAlex; the terms per sense are in `content/senses.yaml`, and each count shows the query it came from). A *Search a sense* box takes any sense or trait (`colour vision, cone`: commas between alternatives) and opens the same papers view. A sense's page lists those papers, most cited or newest, with papers per year, abstracts and free full-text links. If OpenAlex is rate-limiting (429), counts and papers come from Europe PMC instead, and the page says so. When `RESEARCH_URL` is set, *Summarise this research* asks the research assistant for a sourced summary. Links into the workspace when the library covers the taxon. |
 
 Screenshots on the real stack (structured prior, no training, circuits P1) are in
 [`docs/screens/`](docs/screens):
@@ -148,6 +148,7 @@ GET  /api/studio/health                          repos found, SHAs, circuits/res
 GET  /api/studio/explore/species?q=              any taxon by name (GBIF), with its library entry
 GET  /api/studio/explore/taxon/{key}             its senses, ranked by paper count (OpenAlex)
 GET  /api/studio/explore/taxon/{key}/{sense}/papers   the papers (sort=cited|recent, page=)
+GET  /api/studio/explore/taxon/{key}/papers?q=   the papers on any sense typed in
 ```
 
 Studio reads repos read-only and never writes to them. Pinned upstream commits and the formats
