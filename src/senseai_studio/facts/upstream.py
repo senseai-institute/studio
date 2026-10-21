@@ -150,21 +150,79 @@ def world_params_file(cfg: Settings) -> Path | None:
     return None
 
 
+def circuits_prior(cfg: Settings, library_file: Path) -> dict[str, Any] | None:
+    """``senseai-circuits prior --library <clade>.yaml``: the token-space prior.
+
+    The prior moved from ``senseai_world.prior`` to ``senseai_circuits.tokenspace``. None when
+    the CLI is missing or predates the ``prior`` command (circuits before 314732b).
+    """
+    parts = shlex.split(cfg.circuits_cmd)
+    exe = parts and (shutil.which(parts[0]) or (Path(parts[0]).exists() and parts[0]))
+    if not exe:
+        return None
+
+    def ask() -> dict[str, Any] | None:
+        try:
+            cp = subprocess.run(
+                [*parts, "prior", "--library", str(library_file), "--json"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+            )
+            if cp.returncode != 0:
+                return None
+            data = json.loads(cp.stdout)
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            return None
+        if not isinstance(data, dict) or not isinstance(data.get("params"), dict):
+            return None
+        return {
+            "ok": True,
+            "params": data["params"],
+            "proposed": data.get("proposed", []),
+            "params_file": "senseai_circuits/tokenspace.py",
+            "source_label": f"cli:{cfg.circuits_cmd} prior",
+        }
+
+    return cached(
+        ("circuits-prior", cfg.circuits_cmd, str(library_file)),
+        (int(time.time() // 60), *fingerprint(library_file)),
+        ask,
+    )
+
+
 def world_prior(cfg: Settings, library_file: Path) -> dict[str, Any]:
-    """``PriorParams.from_library(<clade>.yaml).provenance()``."""
+    """``PriorParams.from_library(<clade>.yaml).provenance()``.
+
+    From senseai-circuits when its CLI is installed (the prior's home since world re-exports it),
+    else from world's ``prior/params.py`` loaded on its own (worlds that still define it there).
+    """
+    via_circuits = circuits_prior(cfg, library_file)
+    if via_circuits is not None:
+        return via_circuits
     params = world_params_file(cfg)
     if params is None:
         return {
             "ok": False,
-            "error": "senseai-world not found (no checkout beside profiles, "
-            "SENSEAI_WORLD_REPO unset, not installed in the stack)",
+            "error": "token-space prior not found: senseai-circuits is not installed, and "
+            "senseai-world is not found (no checkout beside profiles, SENSEAI_WORLD_REPO "
+            "unset, not installed in the stack)",
         }
     res = cached(
         ("world", str(params), str(library_file)),
         fingerprint(params, library_file),
         lambda: run_probe(sys.executable, ["world", str(params), str(library_file)]),
     )
-    return dict(res) | {"params_file": str(params)}
+    if not res.get("ok") and "senseai_circuits" in str(res.get("error", "")):
+        res = dict(res) | {
+            "error": "this senseai-world re-exports its prior from senseai-circuits; install "
+            "senseai-circuits (or set SENSEAI_CIRCUITS_CMD) so Studio can read it"
+        }
+    return dict(res) | {
+        "params_file": str(params),
+        "source_label": "world/src/senseai_world/prior/params.py",
+    }
 
 
 # --------------------------------------------------------------------------- bench
